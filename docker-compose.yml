@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  spell-binder:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PB_VERSION: ${PB_VERSION:-0.19.4}
+    image: spell-binder:${IMAGE_TAG:-latest}
+    container_name: ${CONTAINER_NAME:-spell-binder}
+    ports:
+      - "${HOST_PORT:-8080}:8080"
+    volumes:
+      - pb_data:/pb/pb_data
+      - ${BACKUP_DIR:-./backups}:/backups:ro
+    environment:
+      - PB_ENCRYPTION_KEY=${PB_ENCRYPTION_KEY:-}
+      - PB_ADMIN_EMAIL=${PB_ADMIN_EMAIL:-}
+      - PB_ADMIN_PASSWORD=${PB_ADMIN_PASSWORD:-}
+      - PB_HTTP_ADDR=0.0.0.0:8080
+      - TZ=${TIMEZONE:-UTC}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "--timeout=5", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.docker.compose.project=spell-binder"
+      - "maintainer=spell-binder"
+
+volumes:
+  pb_data:
+    driver: local
+    labels:
+      - "com.docker.compose.project=spell-binder"
