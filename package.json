@@ -4,7 +4,7 @@
   "description": "A self-hostable web application for cataloging Magic: The Gathering card collections",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",

@@ -23,7 +23,6 @@ pocketbase/pb_public/*
 .env.production.local
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
