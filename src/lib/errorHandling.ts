@@ -94,7 +94,7 @@ export function createAppError(error: any, _context?: string): AppError {
     type: ErrorType.UNKNOWN,
     message: error?.message || 'An unexpected error occurred',
     originalError: error,
-    retryable: true
+    retryable: false
   }
 }
 

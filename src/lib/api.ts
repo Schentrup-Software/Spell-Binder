@@ -83,58 +83,17 @@ export async function getCardById(id: string): Promise<Card> {
  */
 export async function getCardSets(): Promise<{code: string, name: string}[]> {
   try {
-    // Get unique sets from the database
-    const result = await pb.send('/api/collections/cards/records', {
-      method: 'GET',
-      params: {
-        fields: 'set_code,set_name',
-        groupBy: 'set_code',
-        sort: 'set_name',
-      },
-    });
-    
+    const result = await pb.collection('card_sets').getList();
+
     // Extract unique sets
     const sets = result.items.map((item: any) => ({
-      code: item.set_code,
-      name: item.set_name,
+      code: item.id,
+      name: item.name,
     }));
     
     return sets;
   } catch (error) {
     console.error('Error getting card sets:', error);
-    return [];
-  }
-}
-
-/**
- * Get available card types for filtering
- * @returns Promise with array of unique type strings
- */
-export async function getCardTypes(): Promise<string[]> {
-  try {
-    // This is a simplified approach - in a real app, we'd need a more sophisticated
-    // way to extract meaningful types from type_line
-    const result = await pb.send('/api/collections/cards/records', {
-      method: 'GET',
-      params: {
-        fields: 'type_line',
-        limit: 1000,
-      },
-    });
-    
-    // Extract and process types
-    const typeSet = new Set<string>();
-    result.items.forEach((item: any) => {
-      const typeLine = item.type_line || '';
-      const mainType = typeLine.split('—')[0].trim().split(' ').pop();
-      if (mainType) {
-        typeSet.add(mainType);
-      }
-    });
-    
-    return Array.from(typeSet).sort();
-  } catch (error) {
-    console.error('Error getting card types:', error);
     return [];
   }
 }
@@ -157,11 +116,7 @@ export async function addCardToCollection(
 ): Promise<CollectionEntry> {
   return withRetry(async () => {
     try {
-      // For now, hardcode user_id as "user1" - in a real app, this would come from authentication
-      const userId = "user1";
-      
       const data = {
-        user_id: userId,
         card_id: cardId,
         quantity,
         condition,
@@ -190,21 +145,18 @@ export async function addCardToCollection(
  */
 export async function getUserCollection(
   filters: CardFilters = {},
-  sortField: string = 'created',
+  sortField: string = '',
   sortDirection: 'asc' | 'desc' = 'desc',
   searchQuery?: string
 ): Promise<CollectionEntry[]> {
   return withRetry(async () => {
-    try {
-      // For now, hardcode user_id as "user1" - in a real app, this would come from authentication
-      const userId = "user1";
-      
+    try {      
       // Start with base filter
-      let filterString = `user_id = "${userId}"`;
+      let filterString = "";
       
       // Add search query if provided
       if (searchQuery && searchQuery.trim()) {
-        filterString += ` && expand.card_id.name ~ "${searchQuery.trim()}"`;
+        filterString += `name ~ "${searchQuery.trim()}"`;
       }
       
       // Build sort string
@@ -212,25 +164,22 @@ export async function getUserCollection(
       
       // Handle special sort cases that need to use expanded card fields
       if (sortField === 'name') {
-        sortString = 'expand.card_id.name';
+        sortString = 'name';
       } else if (sortField === 'set') {
-        sortString = 'expand.card_id.set_name';
+        sortString = 'set_name';
       } else if (sortField === 'rarity') {
-        sortString = 'expand.card_id.rarity';
+        sortString = 'rarity';
       } else if (sortField === 'price') {
-        sortString = 'expand.card_id.price_usd';
-      } else {
-        // Default to sorting by the collection entry field
-        sortString = sortField;
+        sortString = 'price_usd';
       }
-      
+
       // Add sort direction
-      sortString = `${sortString} ${sortDirection}`;
-      
-      const result = await pb.collection('collections').getList(1, 100, {
+      sortString = sortString ? `${sortDirection === 'asc' ? '+' : '-'}${sortString}` : '';
+
+      const result = await pb.collection('cards').getList(1, 100, {
         filter: filterString,
-        expand: 'card_id',
         sort: sortString,
+        expand: 'collections_via_card.card'
       });
       
       // Map the expanded card_id to the card property

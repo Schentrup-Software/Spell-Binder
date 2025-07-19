@@ -25,17 +25,14 @@ export interface Card {
 
 export interface CollectionEntry {
   id: string
-  user_id: string
   card_id: string
   quantity: number
   condition: CardCondition
   foil: boolean
   acquired_date: string
-  notes?: string
-  created: string
-  updated: string
+  notes?: string,
   expand?: {
-    card_id: Card
+    card: Card
   }
 }
 

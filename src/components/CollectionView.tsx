@@ -56,7 +56,6 @@ export default function CollectionView() {
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [searchQuery, setSearchQuery] = useState('')
-  const [numberOfFailures, setNumberOfFailures] = useState(0);
 
 
 
@@ -122,24 +121,17 @@ export default function CollectionView() {
 
   // Load collection with filters
   const loadCollection = useCallback(async () => {
-    if (numberOfFailures >= 3) {
-      setError('Failed to load your collection after multiple attempts. Please try again later.');
-      return;
-    }
-
     try {
       const data = await withLoading('collection', () =>
         getUserCollection(filters, sortField, sortDirection, searchQuery)
       );
       setCollection(data);
       setError(null);
-      setNumberOfFailures(0); // Reset failures on successful load
     } catch (err) {
       handleError(err, 'Failed to load collection');
       setError('Failed to load your collection. Please try again.');
-      setNumberOfFailures(prev => prev + 1);
     }
-  }, [filters, sortField, sortDirection, searchQuery, withLoading, handleError, numberOfFailures]);
+  }, [filters, sortField, sortDirection, searchQuery]);
 
   // Load collection when filters or sort changes
   useEffect(() => {

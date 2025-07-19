@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CardFilters, CardCondition, SortField, SortDirection } from '../lib/types';
-import { getCardSets, getCardTypes } from '../lib/api';
+import { getCardSets } from '../lib/api';
 
 interface FilterBarProps {
   filters: CardFilters;
@@ -13,22 +13,21 @@ interface FilterBarProps {
   isCollectionView?: boolean;
 }
 
-export default function FilterBar({ 
-  filters, 
-  onFilterChange, 
-  sortField = 'name', 
-  sortDirection = 'asc', 
+export default function FilterBar({
+  filters,
+  onFilterChange,
+  sortField = 'name',
+  sortDirection = 'asc',
   onSortChange,
   searchQuery = '',
   onSearchChange,
   isCollectionView = false
 }: FilterBarProps) {
-  const [sets, setSets] = useState<{code: string, name: string}[]>([]);
-  const [types, setTypes] = useState<string[]>([]);
+  const [sets, setSets] = useState<{ code: string, name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
-  
+
   // Available rarities
   const rarities = [
     { value: 'common', label: 'Common' },
@@ -38,7 +37,7 @@ export default function FilterBar({
     { value: 'special', label: 'Special' },
     { value: 'bonus', label: 'Bonus' }
   ];
-  
+
   // Available colors
   const colors = [
     { value: 'W', label: 'White', bgColor: 'bg-yellow-100' },
@@ -71,27 +70,34 @@ export default function FilterBar({
     { value: 'acquired_date', label: 'Date Acquired' },
     { value: 'quantity', label: 'Quantity' }
   ];
-  
+
+  const types = [
+    'Land',
+    'Creature',
+    'Artifact',
+    'Enchantment',
+    'Planeswalker',
+    'Battle',
+    'Instant',
+    'Sorcery',
+    'Kindred'
+  ];
+
   // Load filter options on component mount
   useEffect(() => {
     async function loadFilterOptions() {
       setIsLoading(true);
       try {
-        // Load sets and types in parallel
-        const [setsData, typesData] = await Promise.all([
-          getCardSets(),
-          getCardTypes()
-        ]);
-        
+        const setsData = await getCardSets();
+
         setSets(setsData);
-        setTypes(typesData);
       } catch (error) {
         console.error('Error loading filter options:', error);
       } finally {
         setIsLoading(false);
       }
     }
-    
+
     loadFilterOptions();
   }, []);
 
@@ -99,7 +105,7 @@ export default function FilterBar({
   useEffect(() => {
     setLocalSearchQuery(searchQuery);
   }, [searchQuery]);
-  
+
   // Handle set change
   const handleSetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onFilterChange({
@@ -107,7 +113,7 @@ export default function FilterBar({
       set: e.target.value || undefined
     });
   };
-  
+
   // Handle type change
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onFilterChange({
@@ -115,7 +121,7 @@ export default function FilterBar({
       type: e.target.value || undefined
     });
   };
-  
+
   // Handle rarity change
   const handleRarityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onFilterChange({
@@ -123,14 +129,14 @@ export default function FilterBar({
       rarity: e.target.value || undefined
     });
   };
-  
+
   // Handle color toggle
   const handleColorToggle = (color: string) => {
     const currentColors = filters.color || [];
     const newColors = currentColors.includes(color)
       ? currentColors.filter(c => c !== color)
       : [...currentColors, color];
-    
+
     onFilterChange({
       ...filters,
       color: newColors.length > 0 ? newColors : undefined
@@ -179,7 +185,7 @@ export default function FilterBar({
       onSearchChange(localSearchQuery);
     }
   };
-  
+
   // Clear all filters
   const clearFilters = () => {
     onFilterChange({});
@@ -196,15 +202,15 @@ export default function FilterBar({
 
   // Check if any filters are active
   const hasActiveFilters = !!(
-    filters.set || 
-    filters.type || 
-    filters.rarity || 
-    filters.color?.length || 
-    filters.condition || 
-    filters.foil || 
+    filters.set ||
+    filters.type ||
+    filters.rarity ||
+    filters.color?.length ||
+    filters.condition ||
+    filters.foil ||
     searchQuery
   );
-  
+
   return (
     <div className="bg-white p-4 rounded-lg shadow mb-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
@@ -248,7 +254,7 @@ export default function FilterBar({
           </form>
         </div>
       )}
-      
+
       {/* Basic filters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Set filter */}
@@ -271,7 +277,7 @@ export default function FilterBar({
             ))}
           </select>
         </div>
-        
+
         {/* Type filter */}
         <div>
           <label htmlFor="type-filter" className="block text-sm font-medium text-gray-700 mb-1">
@@ -292,7 +298,7 @@ export default function FilterBar({
             ))}
           </select>
         </div>
-        
+
         {/* Rarity filter */}
         <div>
           <label htmlFor="rarity-filter" className="block text-sm font-medium text-gray-700 mb-1">
@@ -356,7 +362,7 @@ export default function FilterBar({
           </div>
         )}
       </div>
-      
+
       {/* Color filter */}
       <div className="mt-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -369,11 +375,10 @@ export default function FilterBar({
               <button
                 key={color.value}
                 onClick={() => handleColorToggle(color.value)}
-                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  isSelected 
-                    ? `${color.bgColor} border-2 border-blue-500` 
-                    : `${color.bgColor} border border-gray-300`
-                }`}
+                className={`px-3 py-1 rounded-full text-xs font-medium ${isSelected
+                  ? `${color.bgColor} border-2 border-blue-500`
+                  : `${color.bgColor} border border-gray-300`
+                  }`}
                 title={color.label}
               >
                 {color.label}
@@ -387,7 +392,7 @@ export default function FilterBar({
       {isAdvancedFiltersOpen && isCollectionView && (
         <div className="mt-4 pt-4 border-t border-gray-200">
           <h4 className="text-sm font-medium text-gray-700 mb-3">Advanced Filters</h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Condition filter */}
             <div>

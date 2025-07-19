@@ -22,11 +22,12 @@ export interface Card {
  * Enum for card condition
  */
 export enum CardCondition {
-  NEAR_MINT = 'NM',
-  LIGHTLY_PLAYED = 'LP',
-  MODERATELY_PLAYED = 'MP',
-  HEAVILY_PLAYED = 'HP',
-  DAMAGED = 'DMG'
+  MINT = 'Mint',
+  NEAR_MINT = 'Near Mint',
+  LIGHTLY_PLAYED = 'Lightly Played',
+  MODERATELY_PLAYED = 'Moderately Played',
+  HEAVILY_PLAYED = 'Heavily Played',
+  DAMAGED = 'Damaged'
 }
 
 /**
@@ -34,8 +35,6 @@ export enum CardCondition {
  */
 export interface CollectionEntry {
   id: string;
-  user_id: string;
-  card_id: string;
   quantity: number;
   condition: CardCondition;
   foil: boolean;
