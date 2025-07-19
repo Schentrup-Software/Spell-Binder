@@ -14,7 +14,7 @@ export default function Layout({ children }: LayoutProps) {
       </main>
       <footer className="bg-white border-t py-3 md:py-4 text-center text-xs md:text-sm text-gray-500 mt-auto">
         <div className="container mx-auto px-3 md:px-4">
-          Spell Binder Catalog &copy; {new Date().getFullYear()}
+          Spell Binder &copy; {new Date().getFullYear()}
         </div>
       </footer>
     </div>
