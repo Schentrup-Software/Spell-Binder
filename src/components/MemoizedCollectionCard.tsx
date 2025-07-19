@@ -1,101 +1,101 @@
 import { memo } from 'react';
-import { CollectionEntry } from '../lib/types';
+import { Card } from '../lib/types';
 import CardImage from './CardImage';
 
 interface CollectionCardProps {
-  entry: CollectionEntry;
-  onEdit: (entry: CollectionEntry) => void;
-  onDelete: (entry: CollectionEntry) => void;
+  entry: Card;
+  onEdit: (entry: Card) => void;
+  onDelete: (entry: Card) => void;
 }
 
-const MemoizedCollectionCard = memo(function CollectionCard({ 
-  entry, 
-  onEdit, 
-  onDelete 
+const MemoizedCollectionCard = memo(function CollectionCard({
+  entry,
+  onEdit,
+  onDelete
 }: CollectionCardProps) {
-  if (!entry.card) return null;
-  
+  if (!entry) return null;
+
   // Format price with dollar sign and two decimal places
-  const formattedPrice = entry.card.price_usd 
-    ? `${entry.card.price_usd.toFixed(2)}` 
+  const formattedPrice = entry.price_usd
+    ? `${entry.price_usd.toFixed(2)}`
     : 'N/A';
-  
+
   // Format acquisition date
-  const formattedDate = entry.acquired_date
-    ? new Date(entry.acquired_date).toLocaleDateString()
+  const formattedDate = entry.collection.acquired_date
+    ? new Date(entry.collection.acquired_date).toLocaleDateString()
     : 'Unknown';
-  
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-200 active:scale-95 active:shadow-sm touch-manipulation">
       <div className="flex flex-col sm:flex-row">
         {/* Card image */}
         <div className="sm:w-36 flex-shrink-0">
-          <CardImage 
-            card={entry.card}
-            cardName={entry.card.name} 
+          <CardImage
+            card={entry}
+            cardName={entry.name}
             size="medium"
             quality="medium"
             className="w-full h-48 sm:h-48 object-contain"
           />
         </div>
-        
+
         {/* Card details */}
         <div className="p-3 md:p-4 flex-grow">
           <h3 className="text-base md:text-lg font-medium text-gray-900 mb-1 line-clamp-2">
-            {entry.card.name}
+            {entry.name}
           </h3>
-          
+
           <div className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-1">
-            {entry.card.type_line}
+            {entry.type_line}
           </div>
-          
+
           <div className="flex flex-col sm:flex-row sm:items-center mb-2 gap-1">
             <span className="text-xs md:text-sm">
-              {entry.card.set_name} ({entry.card.set_code})
+              {entry.set_name} ({entry.set_code})
             </span>
             <span className="text-xs text-gray-500 capitalize">
-              {entry.card.rarity}
+              {entry.rarity}
             </span>
           </div>
-          
+
           {/* Collection details - Mobile optimized grid */}
           <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs md:text-sm">
             <div>
               <span className="font-medium text-gray-700">Qty:</span>
-              <span className="ml-1">{entry.quantity}</span>
+              <span className="ml-1">{entry.collection.quantity}</span>
             </div>
-            
+
             <div>
               <span className="font-medium text-gray-700">Condition:</span>
-              <span className="ml-1">{entry.condition}</span>
+              <span className="ml-1">{entry.collection.condition}</span>
             </div>
-            
+
             <div>
               <span className="font-medium text-gray-700">Price:</span>
               <span className="ml-1">{formattedPrice}</span>
             </div>
-            
+
             <div>
               <span className="font-medium text-gray-700">Added:</span>
               <span className="ml-1">{formattedDate}</span>
             </div>
-            
-            {entry.foil && (
+
+            {entry.collection.foil && (
               <div className="col-span-2">
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                   ✨ Foil
                 </span>
               </div>
             )}
-            
-            {entry.notes && (
+
+            {entry.collection.notes && (
               <div className="col-span-2 mt-1">
                 <span className="font-medium text-gray-700">Notes:</span>
-                <span className="ml-1 text-gray-600 line-clamp-2">{entry.notes}</span>
+                <span className="ml-1 text-gray-600 line-clamp-2">{entry.collection.notes}</span>
               </div>
             )}
           </div>
-          
+
           {/* Action buttons - Mobile optimized */}
           <div className="mt-3 flex flex-col sm:flex-row gap-2">
             <button
@@ -125,11 +125,11 @@ const MemoizedCollectionCard = memo(function CollectionCard({
   // Custom comparison function for memo
   return (
     prevProps.entry.id === nextProps.entry.id &&
-    prevProps.entry.quantity === nextProps.entry.quantity &&
-    prevProps.entry.condition === nextProps.entry.condition &&
-    prevProps.entry.foil === nextProps.entry.foil &&
-    prevProps.entry.notes === nextProps.entry.notes &&
-    prevProps.entry.card?.price_usd === nextProps.entry.card?.price_usd &&
+    prevProps.entry.collection.quantity === nextProps.entry.collection.quantity &&
+    prevProps.entry.collection.condition === nextProps.entry.collection.condition &&
+    prevProps.entry.collection.foil === nextProps.entry.collection.foil &&
+    prevProps.entry.collection.notes === nextProps.entry.collection.notes &&
+    prevProps.entry.price_usd === nextProps.entry.price_usd &&
     prevProps.onEdit === nextProps.onEdit &&
     prevProps.onDelete === nextProps.onDelete
   );

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import PageHeader from './PageHeader'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getUserCollection, updateCollectionEntry, removeFromCollection } from '../lib/api'
-import { CollectionEntry, CardCondition, CardFilters, SortField, SortDirection } from '../lib/types'
+import { CollectionEntry, CardCondition, CardFilters, SortField, SortDirection, Card } from '../lib/types'
 
 import SkeletonLoader from './SkeletonLoader'
 import CardImage from './CardImage'
@@ -31,7 +31,7 @@ export default function CollectionView() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Collection state
-  const [collection, setCollection] = useState<CollectionEntry[]>([])
+  const [collection, setCollection] = useState<Card[]>([])
   const [error, setError] = useState<string | null>(null)
 
   // Hooks for error handling and loading states
@@ -39,7 +39,7 @@ export default function CollectionView() {
   const { isLoading, withLoading } = useLoadingState()
 
   // Modal state
-  const [selectedEntry, setSelectedEntry] = useState<CollectionEntry | null>(null)
+  const [selectedEntry, setSelectedEntry] = useState<Card | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showBulkImportModal, setShowBulkImportModal] = useState(false)
@@ -56,8 +56,8 @@ export default function CollectionView() {
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [searchQuery, setSearchQuery] = useState('')
-
-
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(100)
 
   // Parse filters from URL on component mount
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function CollectionView() {
   const loadCollection = useCallback(async () => {
     try {
       const data = await withLoading('collection', () =>
-        getUserCollection(filters, sortField, sortDirection, searchQuery)
+        getUserCollection(filters, sortField, sortDirection, searchQuery, limit, page)
       );
       setCollection(data);
       setError(null);
@@ -158,17 +158,17 @@ export default function CollectionView() {
   };
 
   // Handle opening the edit modal
-  const handleEditClick = (entry: CollectionEntry) => {
+  const handleEditClick = (entry: Card) => {
     setSelectedEntry(entry);
-    setEditQuantity(entry.quantity);
-    setEditCondition(entry.condition);
-    setEditFoil(entry.foil);
-    setEditNotes(entry.notes || '');
+    setEditQuantity(entry.collection.quantity);
+    setEditCondition(entry.collection.condition);
+    setEditFoil(entry.collection.foil);
+    setEditNotes(entry.collection.notes || '');
     setShowEditModal(true);
   };
 
   // Handle opening the delete confirmation modal
-  const handleDeleteClick = (entry: CollectionEntry) => {
+  const handleDeleteClick = (entry: Card) => {
     setSelectedEntry(entry);
     setShowDeleteModal(true);
   };
@@ -202,7 +202,7 @@ export default function CollectionView() {
       );
 
       // Show success message
-      handleSuccess(`Updated ${selectedEntry.card?.name || 'card'} in your collection`);
+      handleSuccess(`Updated ${selectedEntry?.name || 'card'} in your collection`);
 
       // Close the modal
       setShowEditModal(false);
@@ -219,7 +219,7 @@ export default function CollectionView() {
       await removeFromCollection(selectedEntry.id);
 
       // Show success message
-      handleSuccess(`Removed ${selectedEntry.card?.name || 'card'} from your collection`);
+      handleSuccess(`Removed ${selectedEntry?.name || 'card'} from your collection`);
 
       // Remove the entry from state
       setCollection(prevCollection =>
@@ -242,11 +242,11 @@ export default function CollectionView() {
   };
 
   // Memoized callbacks for collection card actions
-  const memoizedHandleEditClick = useCallback((entry: CollectionEntry) => {
+  const memoizedHandleEditClick = useCallback((entry: Card) => {
     handleEditClick(entry);
   }, []);
 
-  const memoizedHandleDeleteClick = useCallback((entry: CollectionEntry) => {
+  const memoizedHandleDeleteClick = useCallback((entry: Card) => {
     handleDeleteClick(entry);
   }, []);
 
@@ -258,19 +258,19 @@ export default function CollectionView() {
   // Render a collection entry card
   // @ts-ignore - Keeping for potential future use
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const renderCollectionCard = (entry: CollectionEntry) => {
-    if (!entry.card) return null;
+  const renderCollectionCard = (entry: Card) => {
+    if (!entry) return null;
 
     // CardImage component will handle all image source logic internally
 
     // Format price with dollar sign and two decimal places
-    const formattedPrice = entry.card.price_usd
-      ? `$${entry.card.price_usd.toFixed(2)}`
+    const formattedPrice = entry.price_usd
+      ? `$${entry.price_usd.toFixed(2)}`
       : 'N/A';
 
     // Format acquisition date
-    const formattedDate = entry.acquired_date
-      ? new Date(entry.acquired_date).toLocaleDateString()
+    const formattedDate = entry.collection.acquired_date
+      ? new Date(entry.collection.acquired_date).toLocaleDateString()
       : 'Unknown';
 
     return (
@@ -279,8 +279,8 @@ export default function CollectionView() {
           {/* Card image */}
           <div className="sm:w-36 flex-shrink-0">
             <CardImage
-              card={entry.card}
-              cardName={entry.card.name}
+              card={entry}
+              cardName={entry.name}
               size="medium"
               quality="medium"
               className="w-full h-48 sm:h-48 object-contain"
@@ -290,19 +290,19 @@ export default function CollectionView() {
           {/* Card details */}
           <div className="p-3 md:p-4 flex-grow">
             <h3 className="text-base md:text-lg font-medium text-gray-900 mb-1 line-clamp-2">
-              {entry.card.name}
+              {entry.name}
             </h3>
 
             <div className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-1">
-              {entry.card.type_line}
+              {entry.type_line}
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center mb-2 gap-1">
               <span className="text-xs md:text-sm">
-                {entry.card.set_name} ({entry.card.set_code})
+                {entry.set_name} ({entry.set_code})
               </span>
               <span className="text-xs text-gray-500 capitalize">
-                {entry.card.rarity}
+                {entry.rarity}
               </span>
             </div>
 
@@ -310,12 +310,12 @@ export default function CollectionView() {
             <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs md:text-sm">
               <div>
                 <span className="font-medium text-gray-700">Qty:</span>
-                <span className="ml-1">{entry.quantity}</span>
+                <span className="ml-1">{entry.collection.quantity}</span>
               </div>
 
               <div>
                 <span className="font-medium text-gray-700">Condition:</span>
-                <span className="ml-1">{entry.condition}</span>
+                <span className="ml-1">{entry.collection.condition}</span>
               </div>
 
               <div>
@@ -328,7 +328,7 @@ export default function CollectionView() {
                 <span className="ml-1">{formattedDate}</span>
               </div>
 
-              {entry.foil && (
+              {entry.collection.foil && (
                 <div className="col-span-2">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                     ✨ Foil
@@ -336,10 +336,10 @@ export default function CollectionView() {
                 </div>
               )}
 
-              {entry.notes && (
+              {entry.collection.notes && (
                 <div className="col-span-2 mt-1">
                   <span className="font-medium text-gray-700">Notes:</span>
-                  <span className="ml-1 text-gray-600 line-clamp-2">{entry.notes}</span>
+                  <span className="ml-1 text-gray-600 line-clamp-2">{entry.collection.notes}</span>
                 </div>
               )}
             </div>
@@ -518,7 +518,7 @@ export default function CollectionView() {
         <Modal
           isOpen={showEditModal}
           onClose={() => setShowEditModal(false)}
-          title={`Edit ${selectedEntry?.card?.name || 'Card'}`}
+          title={`Edit ${selectedEntry?.name || 'Card'}`}
           size="md"
         >
           <div className="space-y-4">
@@ -617,7 +617,7 @@ export default function CollectionView() {
         >
           <div className="space-y-4">
             <p className="text-gray-700">
-              Are you sure you want to remove {selectedEntry?.card?.name} from your collection?
+              Are you sure you want to remove {selectedEntry?.name} from your collection?
             </p>
 
             <div className="flex justify-end space-x-3 pt-4">

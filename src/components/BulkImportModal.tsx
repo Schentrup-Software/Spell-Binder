@@ -31,7 +31,7 @@ export default function BulkImportModal({ isOpen, onClose, onImportComplete }: B
     reader.onload = (e) => {
       const content = e.target?.result as string;
       setCsvContent(content);
-      
+
       try {
         const entries = parseBulkImportCSV(content);
         setParsedEntries(entries);
@@ -40,7 +40,7 @@ export default function BulkImportModal({ isOpen, onClose, onImportComplete }: B
         handleError(error, 'Failed to parse CSV file');
       }
     };
-    
+
     reader.readAsText(file);
   };
 
@@ -52,11 +52,11 @@ export default function BulkImportModal({ isOpen, onClose, onImportComplete }: B
       const result = await importCardsInBulk(parsedEntries, (processed, total) => {
         setImportProgress({ processed, total });
       });
-      
+
       setImportResult(result);
       setStep('complete');
       onImportComplete(result);
-      
+
       if (result.successful > 0) {
         handleSuccess(`Successfully imported ${result.successful} cards`);
       }
@@ -190,7 +190,7 @@ export default function BulkImportModal({ isOpen, onClose, onImportComplete }: B
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
       <h4 className="text-lg font-medium">Importing Cards...</h4>
       <div className="w-full bg-gray-200 rounded-full h-2">
-        <div 
+        <div
           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
           style={{ width: `${(importProgress.processed / importProgress.total) * 100}%` }}
         ></div>
@@ -256,6 +256,7 @@ export default function BulkImportModal({ isOpen, onClose, onImportComplete }: B
     </div>
   );
 
+  console.log('BulkImportModal render', { isOpen, step, parsedEntries, importProgress, importResult });
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Bulk Import Cards" size="lg">
       {step === 'upload' && renderUploadStep()}

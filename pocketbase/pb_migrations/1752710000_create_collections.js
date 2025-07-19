@@ -47,7 +47,8 @@ migrate((db) => {
                     "normal", "split", "flip", "transform", "modal_dfc", "meld",
                     "leveler", "saga", "adventure", "planar", "scheme", "vanguard",
                     "token", "double_faced_token", "emblem", "augment", "host",
-                    "art_series", "double_sided"
+                    "art_series", "double_sided", "case", "mutate", "reversible_card",
+                    "prototype", "class"
                 ]
             },
             {
@@ -246,7 +247,7 @@ migrate((db) => {
                 "name": "border_color",
                 "type": "select",
                 "required": false,
-                "values": ["black", "white", "borderless", "silver", "gold"]
+                "values": ["black", "white", "borderless", "silver", "gold", "yellow"]
             },
             {
                 "name": "frame",
@@ -258,7 +259,7 @@ migrate((db) => {
                 "name": "security_stamp",
                 "type": "select",
                 "required": false,
-                "values": ["oval", "triangle", "acorn", "arena", "heart"]
+                "values": ["oval", "triangle", "acorn", "arena", "heart", "circle"]
             },
             {
                 "name": "full_art",

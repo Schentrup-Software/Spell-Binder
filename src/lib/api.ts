@@ -147,16 +147,41 @@ export async function getUserCollection(
   filters: CardFilters = {},
   sortField: string = '',
   sortDirection: 'asc' | 'desc' = 'desc',
-  searchQuery?: string
-): Promise<CollectionEntry[]> {
+  searchQuery?: string,
+  limit?: number,
+  page?: number
+): Promise<Card[]> {
   return withRetry(async () => {
     try {      
       // Start with base filter
-      let filterString = "";
+      let filterString = "collections_via_card.user_id = auth.id";
       
       // Add search query if provided
       if (searchQuery && searchQuery.trim()) {
         filterString += `name ~ "${searchQuery.trim()}"`;
+      }
+
+      if (filters) {
+        // Filter by set
+        if (filters.set) {
+          filterString += (filterString ? ' && ' : '') + `set_code = "${filters.set}"`;
+        }
+        
+        // Filter by type
+        if (filters.type) {
+          filterString += (filterString ? ' && ' : '') + `type_line ~ "${filters.type}"`;
+        }
+        
+        // Filter by rarity
+        if (filters.rarity) {
+          filterString += (filterString ? ' && ' : '') + `rarity = "${filters.rarity}"`;
+        }
+        
+        // Filter by color
+        if (filters.color && filters.color.length > 0) {
+          const colorFilters = filters.color.map(color => `colors ?~ "${color}"`);
+          filterString += (filterString ? ' && ' : '') + `(${colorFilters.join(' || ')})`;
+        }
       }
       
       // Build sort string
@@ -176,46 +201,19 @@ export async function getUserCollection(
       // Add sort direction
       sortString = sortString ? `${sortDirection === 'asc' ? '+' : '-'}${sortString}` : '';
 
-      const result = await pb.collection('cards').getList(1, 100, {
+      const result = await pb.collection('cards').getList(page, limit, {
         filter: filterString,
         sort: sortString,
-        expand: 'collections_via_card.card'
+        expand: 'collections_via_card',
       });
       
       // Map the expanded card_id to the card property
-      let entries = result.items.map(item => {
-        const entry = item as unknown as CollectionEntry;
-        if (item.expand && item.expand.card_id) {
-          entry.card = item.expand.card_id as unknown as Card;
-        }
-        return entry;
-      });
-      
-      // Apply client-side filtering for filters that can't be done directly in the query
-      if (filters) {
-        // Filter by set
-        if (filters.set) {
-          entries = entries.filter(entry => entry.card?.set_code === filters.set);
-        }
-        
-        // Filter by type
-        if (filters.type) {
-          entries = entries.filter(entry => entry.card?.type_line.includes(filters.type!));
-        }
-        
-        // Filter by rarity
-        if (filters.rarity) {
-          entries = entries.filter(entry => entry.card?.rarity === filters.rarity);
-        }
-        
-        // Filter by color
-        if (filters.color && filters.color.length > 0) {
-          entries = entries.filter(entry => {
-            if (!entry.card?.colors) return false;
-            return filters.color!.some(color => entry.card!.colors.includes(color));
-          });
-        }
-      }
+      let entries = result.items
+        .filter(item => item.expand && item.expand.collections_via_card && item.expand.collections_via_card.length > 0)
+        .map(item => {
+          item.collection = item?.expand?.collections_via_card[0] as unknown as CollectionEntry;
+          return item as unknown as Card;
+        });
       
       return entries;
     } catch (error) {

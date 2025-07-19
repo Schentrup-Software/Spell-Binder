@@ -16,6 +16,7 @@ export interface Card {
   image_file?: string;
   price_usd?: number;
   last_updated?: string;
+  collection: CollectionEntry;
 }
 
 /**
@@ -40,7 +41,6 @@ export interface CollectionEntry {
   foil: boolean;
   acquired_date?: string;
   notes?: string;
-  card?: Card;
 }
 
 /**

@@ -8,10 +8,10 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
 }
 
-export default function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
+export default function Modal({
+  isOpen,
+  onClose,
+  title,
   children,
   size = 'md'
 }: ModalProps) {
@@ -22,14 +22,14 @@ export default function Modal({
         onClose()
       }
     }
-    
+
     window.addEventListener('keydown', handleEscape)
-    
+
     return () => {
       window.removeEventListener('keydown', handleEscape)
     }
   }, [isOpen, onClose])
-  
+
   // Prevent scrolling when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -37,39 +37,36 @@ export default function Modal({
     } else {
       document.body.style.overflow = 'auto'
     }
-    
+
     return () => {
       document.body.style.overflow = 'auto'
     }
   }, [isOpen])
-  
+
   if (!isOpen) return null
-  
+
   const sizeClasses = {
     sm: 'max-w-md',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl'
   }
-  
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-end justify-center min-h-screen px-2 pt-4 pb-4 text-center sm:block sm:p-0 sm:items-center">
         {/* Background overlay */}
-        <div 
+        <div
           className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
           onClick={onClose}
           aria-hidden="true"
         ></div>
-        
-        {/* Center modal */}
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         {/* Modal panel */}
-        <div 
+        <div
           className={`inline-block align-bottom bg-white rounded-t-lg sm:rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle ${sizeClasses[size]} w-full max-h-[90vh] sm:max-h-[85vh] flex flex-col`}
-          role="dialog" 
-          aria-modal="true" 
+          role="dialog"
+          aria-modal="true"
           aria-labelledby="modal-headline"
           onClick={e => e.stopPropagation()}
         >
@@ -93,7 +90,7 @@ export default function Modal({
               </div>
             </div>
           )}
-          
+
           {/* Content */}
           <div className="px-4 py-4 sm:p-6 overflow-y-auto flex-1">
             {children}
