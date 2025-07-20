@@ -1,6 +1,7 @@
 import PocketBase from 'pocketbase';
 import { Card, CardFilters, CollectionEntry, CardCondition } from './types';
 import { createAppError, withRetry, logError } from './errorHandling';
+import { COLLECTIONS } from './pocketbase';
 
 // Create a PocketBase client instance
 const pb = new PocketBase('http://localhost:8090');
@@ -45,7 +46,7 @@ export async function searchCards(
       }
       
       // Execute the search
-      const result = await pb.collection('cards').getList(1, limit, {
+      const result = await pb.collection(COLLECTIONS.CARDS).getList(1, limit, {
         filter: filterString,
         sort: 'name',
       });
@@ -67,7 +68,7 @@ export async function searchCards(
 export async function getCardById(id: string): Promise<Card> {
   return withRetry(async () => {
     try {
-      const card = await pb.collection('cards').getOne(id);
+      const card = await pb.collection(COLLECTIONS.CARDS).getOne(id);
       return card as unknown as Card;
     } catch (error) {
       const appError = createAppError(error, 'Get card details');
@@ -83,7 +84,7 @@ export async function getCardById(id: string): Promise<Card> {
  */
 export async function getCardSets(): Promise<{code: string, name: string}[]> {
   try {
-    const result = await pb.collection('card_sets').getList();
+    const result = await pb.collection(COLLECTIONS.CARD_SETS).getList();
 
     // Extract unique sets
     const sets = result.items.map((item: any) => ({
@@ -117,7 +118,8 @@ export async function addCardToCollection(
   return withRetry(async () => {
     try {
       const data = {
-        card_id: cardId,
+        user: pb.authStore.model?.id,
+        card: cardId,
         quantity,
         condition,
         foil,
@@ -125,7 +127,7 @@ export async function addCardToCollection(
         acquired_date: new Date().toISOString(),
       };
       
-      const record = await pb.collection('collections').create(data);
+      const record = await pb.collection(COLLECTIONS.COLLECTIONS).create(data);
       return record as unknown as CollectionEntry;
     } catch (error) {
       const appError = createAppError(error, 'Add card to collection');
@@ -154,11 +156,11 @@ export async function getUserCollection(
   return withRetry(async () => {
     try {      
       // Start with base filter
-      let filterString = "collections_via_card.user_id = auth.id";
+      let filterString = "";
       
       // Add search query if provided
       if (searchQuery && searchQuery.trim()) {
-        filterString += `name ~ "${searchQuery.trim()}"`;
+        filterString += ` && name ~ "${searchQuery.trim()}"`;
       }
 
       if (filters) {
@@ -201,18 +203,45 @@ export async function getUserCollection(
       // Add sort direction
       sortString = sortString ? `${sortDirection === 'asc' ? '+' : '-'}${sortString}` : '';
 
-      const result = await pb.collection('cards').getList(page, limit, {
+      const result = await pb.collection(COLLECTIONS.CARD_COLLECTION).getList(page, limit, {
         filter: filterString,
         sort: sortString,
-        expand: 'collections_via_card',
       });
       
       // Map the expanded card_id to the card property
       let entries = result.items
-        .filter(item => item.expand && item.expand.collections_via_card && item.expand.collections_via_card.length > 0)
         .map(item => {
-          item.collection = item?.expand?.collections_via_card[0] as unknown as CollectionEntry;
-          return item as unknown as Card;
+          const card = {
+            id: item.id,
+            scryfall_id: item.scryfall_id,
+            name: item.name,
+            set_code: item.set_code,
+            set_name: item.set_name,
+            rarity: item.rarity,
+            mana_cost: item.mana_cost,
+            type_line: item.type_line,
+            colors: item.colors,
+            image_uri: item.image_uris?.normal 
+              ?? item.image_uris?.png 
+              ?? item.image_uris?.art_crop
+              ?? item.image_uris?.border_crop
+              ?? item.image_uris?.large
+              ?? item.image_uris?.small,
+            image_uri_small: item.image_uris?.small,
+            image_file: item.image_file,
+            price_usd: item.price_usd,
+            last_updated: item.last_updated,
+            collection: {
+              id: item.collection_id,
+              quantity: item.collection_quantity,
+              condition: item.collection_condition,
+              foil: item.collection_foil,
+              acquired_date: item.collection_acquired_date,
+              notes: item.collection_notes || "",
+            } as CollectionEntry
+          } as Card;
+
+          return card as Card;
         });
       
       return entries;
@@ -248,8 +277,8 @@ export async function updateCollectionEntry(
         foil,
         notes: notes || "",
       };
-      
-      const record = await pb.collection('collections').update(entryId, data);
+
+      const record = await pb.collection(COLLECTIONS.COLLECTIONS).update(entryId, data);
       return record as unknown as CollectionEntry;
     } catch (error) {
       const appError = createAppError(error, 'Update collection entry');
@@ -267,7 +296,7 @@ export async function updateCollectionEntry(
 export async function removeFromCollection(entryId: string): Promise<void> {
   return withRetry(async () => {
     try {
-      await pb.collection('collections').delete(entryId);
+      await pb.collection(COLLECTIONS.COLLECTIONS).delete(entryId);
     } catch (error) {
       const appError = createAppError(error, 'Remove card from collection');
       logError(appError, 'removeFromCollection');

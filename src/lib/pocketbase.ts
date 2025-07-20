@@ -46,16 +46,19 @@ export interface SyncStatus {
 }
 
 export enum CardCondition {
-  NEAR_MINT = 'NM',
-  LIGHTLY_PLAYED = 'LP',
-  MODERATELY_PLAYED = 'MP',
-  HEAVILY_PLAYED = 'HP',
-  DAMAGED = 'DMG'
+  MINT = 'Mint',
+  NEAR_MINT = 'Near Mint',
+  LIGHTLY_PLAYED = 'Lightly Played',
+  MODERATELY_PLAYED = 'Moderately Played',
+  HEAVILY_PLAYED = 'Heavily Played',
+  DAMAGED = 'Damaged'
 }
 
 // Collection names
 export const COLLECTIONS = {
   CARDS: 'cards',
   COLLECTIONS: 'collections',
-  SYNC_STATUS: 'sync_status'
+  SYNC_STATUS: 'sync_status',
+  CARD_SETS: 'card_sets',
+  CARD_COLLECTION: 'card_collection',
 } as const

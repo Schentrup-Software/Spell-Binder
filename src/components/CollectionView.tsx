@@ -131,7 +131,7 @@ export default function CollectionView() {
       handleError(err, 'Failed to load collection');
       setError('Failed to load your collection. Please try again.');
     }
-  }, [filters, sortField, sortDirection, searchQuery]);
+  }, [filters, sortField, sortDirection, searchQuery, limit, page]);
 
   // Load collection when filters or sort changes
   useEffect(() => {
