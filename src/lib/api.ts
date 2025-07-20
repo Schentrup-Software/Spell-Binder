@@ -154,7 +154,7 @@ export async function getUserCollection(
       
       // Add search query if provided
       if (filters.searchQuery && filters.searchQuery.trim()) {
-        filterString += ` && name ~ "${filters.searchQuery.trim()}"`;
+        filterString += `name ~ "${filters.searchQuery.trim()}"`;
       }
 
       if (filters) {

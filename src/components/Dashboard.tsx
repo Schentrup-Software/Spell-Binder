@@ -366,29 +366,29 @@ export default function Dashboard() {
             {stats.recentlyAdded.length > 0 ? (
               <>
                 {/* Mobile card layout */}
-                <div className="block md:hidden space-y-3">
+                <div className="block md:hidden space-y-4">
                   {stats.recentlyAdded.map(entry => (
-                    <div key={entry.id} className="border border-gray-200 rounded-lg p-3">
-                      <div className="flex items-start space-x-3">
+                    <div key={entry.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start space-x-4">
                         <div className="flex-shrink-0">
                           <CardImage
                             card={entry}
                             cardName={entry.name || 'Unknown Card'}
                             size="small"
                             quality="low"
-                            className="h-12 w-12 rounded object-cover"
+                            className="h-16 w-16 rounded object-cover"
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate">
+                          <div className="text-sm font-medium text-gray-900 truncate mb-1">
                             {entry.name || 'Unknown Card'}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-500 mb-2">
                             {entry.set_name || 'Unknown'} ({entry.set_code || ''})
                           </div>
-                          <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
                             <span>Qty: {entry.collection.quantity}</span>
-                            <span>{entry.collection.condition} {entry.collection.foil ? '(Foil)' : ''}</span>
+                            <span>{entry.collection.condition}{entry.collection.foil ? ' (Foil)' : ''}</span>
                             <span>{formatDate(entry.collection.acquired_date)}</span>
                           </div>
                         </div>
@@ -402,35 +402,35 @@ export default function Dashboard() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Card
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Set
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Quantity
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Condition
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Added
                         </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {stats.recentlyAdded.map(entry => (
-                        <tr key={entry.id}>
+                        <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 mr-4">
+                              <div className="flex-shrink-0 h-12 w-12 mr-4">
                                 <CardImage
                                   card={entry}
                                   cardName={entry.name || 'Unknown Card'}
                                   size="small"
                                   quality="low"
-                                  className="h-10 w-10 rounded-full object-cover"
+                                  className="h-12 w-12 rounded object-cover"
                                 />
                               </div>
                               <div>

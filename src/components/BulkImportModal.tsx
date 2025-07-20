@@ -90,7 +90,7 @@ export default function BulkImportModal({ isOpen, onClose, onImportComplete }: B
         <ul className="list-disc list-inside space-y-1 text-xs">
           <li><strong>Card Name</strong> (required) - The name of the card</li>
           <li><strong>Set Code</strong> (optional) - 3-letter set code (e.g., M21, WAR)</li>
-          <li><strong>Quantity</strong> (required) - Number of copies</li>
+          <li><strong>Quantity</strong> (optional) - Number of copies</li>
           <li><strong>Condition</strong> (optional) - NM, LP, MP, HP, or DMG (defaults to NM)</li>
           <li><strong>Foil</strong> (optional) - true/false (defaults to false)</li>
           <li><strong>Notes</strong> (optional) - Any additional notes</li>

@@ -49,8 +49,31 @@ export function parseBulkImportCSV(csvContent: string): BulkImportEntry[] {
   const lines = csvContent.trim().split('\n');
   const entries: BulkImportEntry[] = [];
   
-  // Skip header row if it exists
-  const startIndex = lines[0]?.toLowerCase().includes('name') ? 1 : 0;
+  if (lines.length === 0) return entries;
+  
+  // Check if first line is a header by looking for common header terms
+  const firstLine = lines[0].toLowerCase();
+  const hasHeader = firstLine.includes('name') || firstLine.includes('card') || firstLine.includes('quantity');
+  
+  let columnMapping: { [key: string]: number } = {};
+  let startIndex = 0;
+  
+  if (hasHeader) {
+    // Parse header to create column mapping
+    const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+    columnMapping = createColumnMapping(headers);
+    startIndex = 1;
+  } else {
+    // Use default column order if no header
+    columnMapping = {
+      cardName: 0,
+      setCode: 1,
+      quantity: 2,
+      condition: 3,
+      foil: 4,
+      notes: 5
+    };
+  }
   
   for (let i = startIndex; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -60,22 +83,24 @@ export function parseBulkImportCSV(csvContent: string): BulkImportEntry[] {
       // Parse CSV line (handle quoted values)
       const values = parseCSVLine(line);
       
-      if (values.length < 3) {
-        console.warn(`Skipping line ${i + 1}: insufficient columns`);
+      if (values.length < 1) {
+        console.warn(`Skipping line ${i + 1}: no data`);
         continue;
       }
       
       const entry: BulkImportEntry = {
-        cardName: values[0]?.trim() || '',
-        setCode: values[1]?.trim() || undefined,
-        quantity: parseInt(values[2]?.trim() || '1') || 1,
-        condition: (values[3]?.trim() as CardCondition) || CardCondition.NEAR_MINT,
-        foil: values[4]?.trim().toLowerCase() === 'true' || values[4]?.trim() === '1',
-        notes: values[5]?.trim() || undefined
+        cardName: getColumnValue(values, columnMapping.cardName, '').trim(),
+        setCode: getColumnValue(values, columnMapping.setCode, '').trim() || undefined,
+        quantity: parseInt(getColumnValue(values, columnMapping.quantity, '1')) || 1,
+        condition: (getColumnValue(values, columnMapping.condition, CardCondition.NEAR_MINT).trim() as CardCondition) || CardCondition.NEAR_MINT,
+        foil: ['true', '1', 'yes', 'y'].includes(getColumnValue(values, columnMapping.foil, 'false').trim().toLowerCase()),
+        notes: getColumnValue(values, columnMapping.notes, '').trim() || undefined
       };
       
       if (entry.cardName) {
         entries.push(entry);
+      } else {
+        console.warn(`Skipping line ${i + 1}: missing card name`);
       }
     } catch (error) {
       console.warn(`Error parsing line ${i + 1}:`, error);
@@ -83,6 +108,82 @@ export function parseBulkImportCSV(csvContent: string): BulkImportEntry[] {
   }
   
   return entries;
+}
+
+/**
+ * Create column mapping from headers
+ * @param headers Array of header strings (lowercase)
+ * @returns Mapping object with column indices
+ */
+function createColumnMapping(headers: string[]): { [key: string]: number } {
+  const mapping: { [key: string]: number } = {
+    cardName: -1,
+    setCode: -1,
+    quantity: -1,
+    condition: -1,
+    foil: -1,
+    notes: -1
+  };
+  
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i];
+    
+    // Card name variations
+    if (header.includes('card') && header.includes('name') || 
+        header === 'name' || 
+        header === 'card') {
+      mapping.cardName = i;
+    }
+    // Set code variations
+    else if (header.includes('set') && (header.includes('code') || header.includes('id')) ||
+             header === 'set' ||
+             header === 'setcode') {
+      mapping.setCode = i;
+    }
+    // Quantity variations
+    else if (header === 'quantity' || 
+             header === 'qty' || 
+             header === 'count' ||
+             header === 'amount') {
+      mapping.quantity = i;
+    }
+    // Condition variations
+    else if (header === 'condition' || 
+             header === 'cond' ||
+             header === 'grade') {
+      mapping.condition = i;
+    }
+    // Foil variations
+    else if (header === 'foil' || 
+             header === 'premium' ||
+             header === 'shiny') {
+      mapping.foil = i;
+    }
+    // Notes variations
+    else if (header === 'notes' || 
+             header === 'note' ||
+             header === 'comment' ||
+             header === 'comments' ||
+             header === 'description') {
+      mapping.notes = i;
+    }
+  }
+  
+  return mapping;
+}
+
+/**
+ * Get value from array at given index, with fallback
+ * @param values Array of values
+ * @param index Column index (-1 means not found)
+ * @param defaultValue Default value if index is invalid
+ * @returns Value or default
+ */
+function getColumnValue(values: string[], index: number, defaultValue: string): string {
+  if (index === -1 || index >= values.length) {
+    return defaultValue;
+  }
+  return values[index] || defaultValue;
 }
 
 /**
@@ -193,18 +294,18 @@ export async function exportCollection(format: 'csv' | 'json' = 'csv'): Promise<
     
     const exportData: ExportData = {
       exportDate: new Date().toISOString(),
-      totalCards: collection.reduce((sum, entry) => sum + entry.quantity, 0),
+      totalCards: collection.reduce((sum, card) => sum + (card.collection?.quantity || 0), 0),
       uniqueCards: collection.length,
-      collection: collection.map(entry => ({
-        cardName: entry.card?.name || 'Unknown',
-        setName: entry.card?.set_name || 'Unknown',
-        setCode: entry.card?.set_code || 'Unknown',
-        quantity: entry.quantity,
-        condition: entry.condition,
-        foil: entry.foil,
-        acquiredDate: entry.acquired_date,
-        notes: entry.notes,
-        estimatedValue: entry.card?.price_usd
+      collection: collection.map(card => ({
+        cardName: card.name || 'Unknown',
+        setName: card.set_name || 'Unknown',
+        setCode: card.set_code || 'Unknown',
+        quantity: card.collection?.quantity || 0,
+        condition: card.collection?.condition || CardCondition.NEAR_MINT,
+        foil: card.collection?.foil || false,
+        acquiredDate: card.collection?.acquired_date,
+        notes: card.collection?.notes,
+        estimatedValue: card.price_usd
       }))
     };
     
@@ -296,18 +397,18 @@ export function downloadFile(data: string, filename: string, mimeType: string = 
  */
 export function generateImportTemplate(): string {
   const headers = [
-    'Card Name',
-    'Set Code',
-    'Quantity',
-    'Condition',
-    'Foil',
-    'Notes'
+    'Card Name',      // Required: cardName
+    'Set Code',       // Optional: setCode
+    'Quantity',       // Optional: quantity (default: 1)
+    'Condition',      // Optional: condition (default: Near Mint)
+    'Foil',          // Optional: foil (default: false)
+    'Notes'          // Optional: notes
   ];
   
   const sampleRows = [
-    ['Lightning Bolt', 'M21', '4', 'NM', 'false', 'Great burn spell'],
-    ['Black Lotus', 'LEA', '1', 'LP', 'false', 'Power 9 card'],
-    ['Jace, the Mind Sculptor', 'WWK', '2', 'NM', 'true', 'Foil planeswalker']
+    ['Lightning Bolt', 'M21', '4', 'Near Mint', 'false', 'Great burn spell'],
+    ['Black Lotus', 'LEA', '1', 'Lightly Played', 'false', 'Power 9 card'],
+    ['Jace, the Mind Sculptor', 'WWK', '2', 'Near Mint', 'true', 'Foil planeswalker']
   ];
   
   const csvContent = [

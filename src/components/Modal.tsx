@@ -54,7 +54,7 @@ export default function Modal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-end justify-center min-h-screen px-2 pt-4 pb-4 text-center sm:block sm:p-0 sm:items-center">
+      <div className="flex items-center justify-center min-h-screen px-4 py-8 text-center">
         {/* Background overlay */}
         <div
           className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
@@ -64,7 +64,7 @@ export default function Modal({
 
         {/* Modal panel */}
         <div
-          className={`inline-block align-bottom bg-white rounded-t-lg sm:rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle ${sizeClasses[size]} w-full max-h-[90vh] sm:max-h-[85vh] flex flex-col`}
+          className={`inline-block bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all ${sizeClasses[size]} w-full max-h-[90vh] flex flex-col relative z-10`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-headline"
