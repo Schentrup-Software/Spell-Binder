@@ -78,7 +78,7 @@ export default function Dashboard() {
       }
 
       // Calculate total cards (sum of quantities)
-      const totalCards = collectionEntries.reduce((sum, entry) => sum + entry.collection.quantity, 0)
+      const totalCards = collectionEntries.reduce((sum, entry) => sum + (entry?.collection?.quantity ?? 0), 0)
 
       // Count unique cards
       const uniqueCards = collectionEntries.length
@@ -90,7 +90,7 @@ export default function Dashboard() {
       // Calculate total value
       const totalValue = collectionEntries.reduce((sum, entry) => {
         const cardPrice = entry.price_usd || 0
-        return sum + (cardPrice * entry.collection.quantity)
+        return sum + (cardPrice * (entry?.collection?.quantity ?? 0))
       }, 0)
 
       // Calculate color distribution
@@ -101,19 +101,19 @@ export default function Dashboard() {
 
         // Handle colorless cards
         if (!entry.colors || entry.colors.length === 0) {
-          colorDistribution['C'] = (colorDistribution['C'] || 0) + entry.collection.quantity
+          colorDistribution['C'] = (colorDistribution['C'] || 0) + (entry?.collection?.quantity ?? 0)
           return
         }
 
         // Handle multicolor cards
         if (entry.colors.length > 1) {
-          colorDistribution['M'] = (colorDistribution['M'] || 0) + entry.collection.quantity
+          colorDistribution['M'] = (colorDistribution['M'] || 0) + (entry?.collection?.quantity ?? 0)
           return
         }
 
         // Handle single color cards
         const color = entry.colors[0]
-        colorDistribution[color] = (colorDistribution[color] || 0) + entry.collection.quantity
+        colorDistribution[color] = (colorDistribution[color] || 0) + (entry?.collection?.quantity ?? 0)
       })
 
       // Calculate type distribution
@@ -126,7 +126,7 @@ export default function Dashboard() {
         const typeLine = entry.type_line
         const primaryType = typeLine.split('—')[0].trim().split(' ').pop() || 'Unknown'
 
-        typeDistribution[primaryType] = (typeDistribution[primaryType] || 0) + entry.collection.quantity
+        typeDistribution[primaryType] = (typeDistribution[primaryType] || 0) + (entry?.collection?.quantity ?? 0)
       })
 
       // Calculate rarity distribution
@@ -136,14 +136,14 @@ export default function Dashboard() {
         if (!entry) return
 
         const rarity = entry.rarity
-        rarityDistribution[rarity] = (rarityDistribution[rarity] || 0) + entry.collection.quantity
+        rarityDistribution[rarity] = (rarityDistribution[rarity] || 0) + (entry?.collection?.quantity ?? 0)
       })
 
       // Get recently added cards (last 5)
       const recentlyAdded = [...collectionEntries]
         .sort((a, b) => {
-          const dateA = a.collection.acquired_date ? new Date(a.collection.acquired_date).getTime() : 0
-          const dateB = b.collection.acquired_date ? new Date(b.collection.acquired_date).getTime() : 0
+          const dateA = a?.collection?.acquired_date ? new Date(a.collection.acquired_date).getTime() : 0
+          const dateB = b?.collection?.acquired_date ? new Date(b.collection.acquired_date).getTime() : 0
           return dateB - dateA
         })
         .slice(0, 5)
@@ -387,9 +387,9 @@ export default function Dashboard() {
                             {entry.set_name || 'Unknown'} ({entry.set_code || ''})
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                            <span>Qty: {entry.collection.quantity}</span>
-                            <span>{entry.collection.condition}{entry.collection.foil ? ' (Foil)' : ''}</span>
-                            <span>{formatDate(entry.collection.acquired_date)}</span>
+                            <span>Qty: {entry?.collection?.quantity}</span>
+                            <span>{entry?.collection?.condition}{entry?.collection?.foil ? ' (Foil)' : ''}</span>
+                            <span>{formatDate(entry?.collection?.acquired_date)}</span>
                           </div>
                         </div>
                       </div>
@@ -445,13 +445,13 @@ export default function Dashboard() {
                             <div className="text-xs text-gray-500">{entry.set_code || ''}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {entry.collection.quantity}
+                            {entry?.collection?.quantity}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {entry.collection.condition} {entry.collection.foil ? '(Foil)' : ''}
+                            {entry?.collection?.condition} {entry?.collection?.foil ? '(Foil)' : ''}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(entry.collection.acquired_date)}
+                            {formatDate(entry?.collection?.acquired_date)}
                           </td>
                         </tr>
                       ))}

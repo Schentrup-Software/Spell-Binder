@@ -16,7 +16,7 @@ export interface Card {
   image_file?: string;
   price_usd?: number;
   last_updated?: string;
-  collection: CollectionEntry;
+  collection?: CollectionEntry;
 }
 
 /**

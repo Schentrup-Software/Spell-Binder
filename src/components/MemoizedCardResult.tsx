@@ -41,7 +41,7 @@ const MemoizedCardResult = memo(function CardResult({ card, onClick }: CardResul
       className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer active:scale-95 active:shadow-sm touch-manipulation"
       onClick={() => onClick(card)}
     >
-      <div className="flex flex-col sm:flex-row">
+      <div className="flex flex-col sm:flex-row m-4">
         {/* Card image */}
         <div className="sm:w-36 flex-shrink-0">
           <CardImage

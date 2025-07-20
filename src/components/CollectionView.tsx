@@ -170,10 +170,10 @@ export default function CollectionView() {
   // Handle opening the edit modal
   const handleEditClick = (entry: Card) => {
     setSelectedEntry(entry);
-    setEditQuantity(entry.collection.quantity);
-    setEditCondition(entry.collection.condition);
-    setEditFoil(entry.collection.foil);
-    setEditNotes(entry.collection.notes || '');
+    setEditQuantity(entry?.collection?.quantity || 1);
+    setEditCondition(entry?.collection?.condition || CardCondition.NEAR_MINT);
+    setEditFoil(entry?.collection?.foil || false);
+    setEditNotes(entry?.collection?.notes || '');
     setShowEditModal(true);
   };
 
@@ -279,7 +279,7 @@ export default function CollectionView() {
       : 'N/A';
 
     // Format acquisition date
-    const formattedDate = entry.collection.acquired_date
+    const formattedDate = entry?.collection?.acquired_date
       ? new Date(entry.collection.acquired_date).toLocaleDateString()
       : 'Unknown';
 
@@ -320,12 +320,12 @@ export default function CollectionView() {
             <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs md:text-sm">
               <div>
                 <span className="font-medium text-gray-700">Qty:</span>
-                <span className="ml-1">{entry.collection.quantity}</span>
+                <span className="ml-1">{entry?.collection?.quantity}</span>
               </div>
 
               <div>
                 <span className="font-medium text-gray-700">Condition:</span>
-                <span className="ml-1">{entry.collection.condition}</span>
+                <span className="ml-1">{entry?.collection?.condition}</span>
               </div>
 
               <div>
@@ -338,7 +338,7 @@ export default function CollectionView() {
                 <span className="ml-1">{formattedDate}</span>
               </div>
 
-              {entry.collection.foil && (
+              {entry?.collection?.foil && (
                 <div className="col-span-2">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                     ✨ Foil
@@ -346,7 +346,7 @@ export default function CollectionView() {
                 </div>
               )}
 
-              {entry.collection.notes && (
+              {entry?.collection?.notes && (
                 <div className="col-span-2 mt-1">
                   <span className="font-medium text-gray-700">Notes:</span>
                   <span className="ml-1 text-gray-600 line-clamp-2">{entry.collection.notes}</span>

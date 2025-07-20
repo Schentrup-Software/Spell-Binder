@@ -13,7 +13,7 @@ const MemoizedCollectionCard = memo(function CollectionCard({
   onEdit,
   onDelete
 }: CollectionCardProps) {
-  if (!entry) return null;
+  if (!entry?.collection) return null;
 
   // Format price with dollar sign and two decimal places
   const formattedPrice = entry.price_usd
@@ -125,10 +125,10 @@ const MemoizedCollectionCard = memo(function CollectionCard({
   // Custom comparison function for memo
   return (
     prevProps.entry.id === nextProps.entry.id &&
-    prevProps.entry.collection.quantity === nextProps.entry.collection.quantity &&
-    prevProps.entry.collection.condition === nextProps.entry.collection.condition &&
-    prevProps.entry.collection.foil === nextProps.entry.collection.foil &&
-    prevProps.entry.collection.notes === nextProps.entry.collection.notes &&
+    prevProps.entry?.collection?.quantity === nextProps.entry?.collection?.quantity &&
+    prevProps.entry?.collection?.condition === nextProps.entry?.collection?.condition &&
+    prevProps.entry?.collection?.foil === nextProps.entry?.collection?.foil &&
+    prevProps.entry?.collection?.notes === nextProps.entry?.collection?.notes &&
     prevProps.entry.price_usd === nextProps.entry.price_usd &&
     prevProps.onEdit === nextProps.onEdit &&
     prevProps.onDelete === nextProps.onDelete

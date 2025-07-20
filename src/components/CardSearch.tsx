@@ -16,30 +16,30 @@ import { useLoadingState } from '../hooks/useLoadingState'
 
 export default function CardSearch() {
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<Card[]>([])
+  const [searchResults, setSearchResults] = useState<Card[] | null>(null)
   const [filters, setFilters] = useState<CardFilters>({})
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Hooks for error handling and loading states
   const { handleError, handleSuccess } = useErrorHandler({ context: 'Card Search' })
   const { isLoading, withLoading } = useLoadingState()
-  
+
   // Debounce search query to avoid excessive API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
-  
+
   // Perform search when debounced query or filters change
   useEffect(() => {
     async function performSearch() {
       // Don't search if query is empty
       if (!debouncedSearchQuery.trim()) {
-        setSearchResults([])
+        setSearchResults(null)
         return
       }
-      
+
       try {
-        const results = await withLoading('search', () => 
+        const results = await withLoading('search', () =>
           searchCards(debouncedSearchQuery, filters)
         )
         setSearchResults(results)
@@ -47,35 +47,35 @@ export default function CardSearch() {
       } catch (err) {
         handleError(err, 'Search failed')
         setError('An error occurred while searching. Please try again.')
-        setSearchResults([])
+        setSearchResults(null)
       }
     }
-    
+
     performSearch()
   }, [debouncedSearchQuery, filters, withLoading, handleError])
-  
+
   // Handle manual search form submission
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     // The search is already triggered by the useEffect hook
     // This is just to handle the form submission event
   }
-  
+
   // Handle filter changes
   const handleFilterChange = (newFilters: CardFilters) => {
     setFilters(newFilters)
   }
-  
+
   // Handle card selection
   const handleCardSelect = (card: Card) => {
     setSelectedCard(card)
     setShowModal(true)
   }
-  
+
   // Handle adding card to collection
   const handleAddToCollection = async (quantity: number, condition: CardCondition, foil: boolean, notes: string) => {
     if (!selectedCard) return;
-    
+
     try {
       await addCardToCollection(
         selectedCard.id,
@@ -84,10 +84,10 @@ export default function CardSearch() {
         foil,
         notes
       );
-      
+
       // Show success message
       handleSuccess(`Added ${quantity} ${selectedCard.name} to collection!`);
-      
+
       // Close the modal
       setShowModal(false);
     } catch (err: any) {
@@ -95,15 +95,15 @@ export default function CardSearch() {
       throw err; // Re-throw so CardDetail can handle loading state
     }
   }
-  
+
   return (
     <ErrorBoundary>
       <div className="space-y-6">
-        <PageHeader 
-          title="Add Cards to Collection" 
+        <PageHeader
+          title="Add Cards to Collection"
           description="Search for Magic: The Gathering cards to add to your collection"
         />
-        
+
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-4 md:p-6">
             <form onSubmit={handleSearch}>
@@ -145,23 +145,23 @@ export default function CardSearch() {
                 </div>
               </div>
             </form>
-            
+
             <div className="mt-4 md:mt-6">
               <div className="flex flex-wrap gap-2 text-xs md:text-sm">
                 <span className="text-gray-500 font-medium">Popular searches:</span>
-                <button 
+                <button
                   onClick={() => setSearchQuery('Black Lotus')}
                   className="text-blue-600 hover:text-blue-800 active:text-blue-900 transition-colors touch-manipulation px-1 py-0.5 rounded hover:bg-blue-50"
                 >
                   Black Lotus
                 </button>
-                <button 
+                <button
                   onClick={() => setSearchQuery('Lightning Bolt')}
                   className="text-blue-600 hover:text-blue-800 active:text-blue-900 transition-colors touch-manipulation px-1 py-0.5 rounded hover:bg-blue-50"
                 >
                   Lightning Bolt
                 </button>
-                <button 
+                <button
                   onClick={() => setSearchQuery('Counterspell')}
                   className="text-blue-600 hover:text-blue-800 active:text-blue-900 transition-colors touch-manipulation px-1 py-0.5 rounded hover:bg-blue-50"
                 >
@@ -170,14 +170,14 @@ export default function CardSearch() {
               </div>
             </div>
           </div>
-          
+
           {/* Show filters if there are search results */}
-          {searchResults.length > 0 && (
+          {(searchResults?.length ?? 0) > 0 && (
             <div className="border-t border-gray-200">
               <FilterBar filters={filters} onFilterChange={handleFilterChange} />
             </div>
           )}
-          
+
           {/* Search results */}
           <div className="border-t">
             {isLoading('search') ? (
@@ -194,22 +194,22 @@ export default function CardSearch() {
                   Please try again or refine your search query.
                 </p>
               </div>
-            ) : searchResults.length > 0 ? (
+            ) : searchResults && searchResults.length > 0 ? (
               <div className="p-4">
                 <div className="mb-4 text-sm text-gray-500">
                   Found {searchResults.length} {searchResults.length === 1 ? 'card' : 'cards'}
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   {searchResults.map(card => (
-                    <MemoizedCardResult 
-                      key={card.id} 
-                      card={card} 
-                      onClick={handleCardSelect} 
+                    <MemoizedCardResult
+                      key={card.id}
+                      card={card}
+                      onClick={handleCardSelect}
                     />
                   ))}
                 </div>
               </div>
-            ) : searchQuery.trim() ? (
+            ) : searchResults && searchResults.length === 0 && searchQuery.trim() ? (
               <div className="text-center py-12">
                 <p className="text-gray-500">
                   No cards found matching "{searchQuery}".
@@ -227,16 +227,16 @@ export default function CardSearch() {
             )}
           </div>
         </div>
-        
+
         {/* Card detail modal */}
-        <Modal 
-          isOpen={showModal} 
+        <Modal
+          isOpen={showModal}
           onClose={() => setShowModal(false)}
           title={selectedCard?.name || 'Card Details'}
           size="lg"
         >
           {selectedCard && (
-            <CardDetail 
+            <CardDetail
               card={selectedCard}
               onAddToCollection={handleAddToCollection}
               onClose={() => setShowModal(false)}

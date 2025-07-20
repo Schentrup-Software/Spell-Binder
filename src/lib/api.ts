@@ -2,6 +2,7 @@ import { Card, CardFilters, CollectionEntry, CardCondition } from './types';
 import { createAppError, withRetry, logError } from './errorHandling';
 import { COLLECTIONS } from './pocketbase';
 import pb from './pocketbase';
+import { RecordModel } from 'pocketbase';
 
 /**
  * Search for cards by name and optional filters
@@ -48,7 +49,7 @@ export async function searchCards(
         sort: 'name',
       });
       
-      return result.items as unknown as Card[];
+      return result.items.map((item: RecordModel) => createCardFromRecord(item));
     } catch (error) {
       const appError = createAppError(error, 'Card search');
       logError(appError, 'searchCards');
@@ -205,35 +206,14 @@ export async function getUserCollection(
       // Map the expanded card_id to the card property
       let entries = result.items
         .map(item => {
-          const card = {
-            id: item.id,
-            scryfall_id: item.scryfall_id,
-            name: item.name,
-            set_code: item.set_code.toUpperCase(),
-            set_name: item.set_name,
-            rarity: item.rarity,
-            mana_cost: item.mana_cost,
-            type_line: item.type_line,
-            colors: item.colors,
-            image_uri: item.image_uris?.normal 
-              ?? item.image_uris?.png 
-              ?? item.image_uris?.art_crop
-              ?? item.image_uris?.border_crop
-              ?? item.image_uris?.large
-              ?? item.image_uris?.small,
-            image_uri_small: item.image_uris?.small,
-            image_file: item.image_file,
-            price_usd: item.price_usd,
-            last_updated: item.last_updated,
-            collection: {
+          const card = createCardFromRecord(item as RecordModel, {
               id: item.collection_id,
               quantity: item.collection_quantity,
               condition: item.collection_condition,
               foil: item.collection_foil,
               acquired_date: item.collection_acquired_date,
               notes: item.collection_notes || "",
-            } as CollectionEntry
-          } as Card;
+            } as CollectionEntry);
 
           return card as Card;
         });
@@ -245,6 +225,31 @@ export async function getUserCollection(
       throw appError;
     }
   });
+}
+
+function createCardFromRecord(item: RecordModel, collectionEntry?: CollectionEntry): Card {
+  return {
+    id: item.id,
+    scryfall_id: item.scryfall_id,
+    name: item.name,
+    set_code: item.set_code.toUpperCase(),
+    set_name: item.set_name,
+    rarity: item.rarity,
+    mana_cost: item.mana_cost,
+    type_line: item.type_line,
+    colors: item.colors,
+    image_uri: item.image_uris?.normal
+      ?? item.image_uris?.png
+      ?? item.image_uris?.art_crop
+      ?? item.image_uris?.border_crop
+      ?? item.image_uris?.large
+      ?? item.image_uris?.small,
+    image_uri_small: item.image_uris?.small,
+    image_file: item.image_file,
+    price_usd: item.price_usd,
+    last_updated: item.last_updated,
+    collection: collectionEntry
+  };
 }
 
 /**
