@@ -53,6 +53,9 @@ export interface CardFilters {
   rarity?: string;
   foil?: boolean;
   condition?: CardCondition;
+  sort?: SortField;
+  sortDirection?: SortDirection;
+  searchQuery?: string;
 }
 
 /**

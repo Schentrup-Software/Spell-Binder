@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import PageHeader from './PageHeader'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getUserCollection, updateCollectionEntry, removeFromCollection } from '../lib/api'
-import { CollectionEntry, CardCondition, CardFilters, SortField, SortDirection, Card } from '../lib/types'
+import { CardCondition, CardFilters, SortField, SortDirection, Card } from '../lib/types'
 
 import SkeletonLoader from './SkeletonLoader'
 import CardImage from './CardImage'
@@ -27,6 +27,8 @@ const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): T =
 };
 
 export default function CollectionView() {
+  const [pageLoaded, setPageLoaded] = useState(false);
+
   // URL search params for filter persistence
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -52,46 +54,41 @@ export default function CollectionView() {
   const [editNotes, setEditNotes] = useState('')
 
   // Filter and sort state
-  const [filters, setFilters] = useState<CardFilters>({})
-  const [sortField, setSortField] = useState<SortField>('name')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [filters, setFilters] = useState<CardFilters>({
+    sort: 'name',
+    sortDirection: 'asc',
+    searchQuery: ''
+  })
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(100)
 
   // Parse filters from URL on component mount
   useEffect(() => {
-    const set = searchParams.get('set');
-    const type = searchParams.get('type');
-    const rarity = searchParams.get('rarity');
-    const colors = searchParams.getAll('color');
-    const condition = searchParams.get('condition') as CardCondition | null;
-    const foil = searchParams.get('foil') === 'true';
-    const sort = searchParams.get('sort') as SortField || 'name';
-    const direction = searchParams.get('direction') as SortDirection || 'asc';
-    const query = searchParams.get('q') || '';
+    if (pageLoaded) return; // Only run this once
 
-    // Set initial filter state from URL
-    setFilters({
-      set: set || undefined,
-      type: type || undefined,
-      rarity: rarity || undefined,
-      color: colors.length > 0 ? colors : undefined,
-      condition: condition || undefined,
-      foil: foil || undefined
-    });
+    const foil = searchParams.get('foil');
+    const newFilters: CardFilters = {
+      set: searchParams.get('set') || undefined,
+      type: searchParams.get('type') || undefined,
+      rarity: searchParams.get('rarity') || undefined,
+      color: searchParams.getAll('color') || [],
+      condition: searchParams.get('condition') as CardCondition | null || undefined,
+      foil: typeof foil === 'string' ? foil === 'true' : undefined, // Convert string to boolean
+      sort: searchParams.get('sort') as SortField || undefined,
+      sortDirection: searchParams.get('direction') as SortDirection || undefined,
+      searchQuery: searchParams.get('q') || undefined
+    };
 
-    setSortField(sort);
-    setSortDirection(direction);
-    setSearchQuery(query);
+    setFilters((prevFilters) => ({
+      ...prevFilters,
+      ...newFilters
+    }));
+    setPageLoaded(true); // Mark page as loaded
   }, [searchParams]);
 
   // Update URL when filters change
   const updateUrlParams = useCallback((
     newFilters: CardFilters,
-    newSortField: SortField,
-    newSortDirection: SortDirection,
-    newSearchQuery: string
   ) => {
     const params = new URLSearchParams();
 
@@ -106,9 +103,9 @@ export default function CollectionView() {
     }
 
     // Add sort and search to URL
-    params.set('sort', newSortField);
-    params.set('direction', newSortDirection);
-    if (newSearchQuery) params.set('q', newSearchQuery);
+    params.set('sort', newFilters.sort ?? 'name');
+    params.set('direction', newFilters.sortDirection ?? 'asc');
+    if (newFilters.searchQuery) params.set('q', newFilters.searchQuery);
 
     setSearchParams(params);
   }, [setSearchParams]);
@@ -121,9 +118,11 @@ export default function CollectionView() {
 
   // Load collection with filters
   const loadCollection = useCallback(async () => {
+    if (!pageLoaded) return; // Prevent loading before initial filters are set
+
     try {
       const data = await withLoading('collection', () =>
-        getUserCollection(filters, sortField, sortDirection, searchQuery, limit, page)
+        getUserCollection(filters, limit, page)
       );
       setCollection(data);
       setError(null);
@@ -131,7 +130,7 @@ export default function CollectionView() {
       handleError(err, 'Failed to load collection');
       setError('Failed to load your collection. Please try again.');
     }
-  }, [filters, sortField, sortDirection, searchQuery, limit, page]);
+  }, [filters, limit, page, pageLoaded]);
 
   // Load collection when filters or sort changes
   useEffect(() => {
@@ -140,21 +139,32 @@ export default function CollectionView() {
 
   // Handle filter changes
   const handleFilterChange = (newFilters: CardFilters) => {
+    console.log('Filters changed:', newFilters);
     setFilters(newFilters);
-    debouncedUpdateUrlParams(newFilters, sortField, sortDirection, searchQuery);
+    debouncedUpdateUrlParams(newFilters);
   };
 
   // Handle sort changes
   const handleSortChange = (field: SortField, direction: SortDirection) => {
-    setSortField(field);
-    setSortDirection(direction);
-    debouncedUpdateUrlParams(filters, field, direction, searchQuery);
+    const newFilters = {
+      ...filters,
+      sort: field,
+      sortDirection: direction
+    };
+
+    setFilters(newFilters);
+    debouncedUpdateUrlParams(newFilters);
   };
 
   // Handle search changes
   const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    debouncedUpdateUrlParams(filters, sortField, sortDirection, query);
+    const newFilters = {
+      ...filters,
+      searchQuery: query
+    };
+
+    setFilters(newFilters);
+    debouncedUpdateUrlParams(newFilters);
   };
 
   // Handle opening the edit modal
@@ -416,10 +426,10 @@ export default function CollectionView() {
         <FilterBar
           filters={filters}
           onFilterChange={handleFilterChange}
-          sortField={sortField}
-          sortDirection={sortDirection}
+          sortField={filters.sort}
+          sortDirection={filters.sortDirection}
           onSortChange={handleSortChange}
-          searchQuery={searchQuery}
+          searchQuery={filters.searchQuery}
           onSearchChange={handleSearchChange}
           isCollectionView={true}
         />
@@ -481,7 +491,7 @@ export default function CollectionView() {
             </div>
           ) : (
             <div className="text-center py-12">
-              {Object.keys(filters).length > 0 || searchQuery ? (
+              {Object.keys(filters).length > 0 || filters.searchQuery ? (
                 <>
                   <p className="text-gray-500 text-lg mb-4">
                     No cards match your current filters.
@@ -489,8 +499,6 @@ export default function CollectionView() {
                   <button
                     onClick={() => {
                       setFilters({});
-                      setSearchQuery('');
-                      setSearchParams({});
                     }}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >

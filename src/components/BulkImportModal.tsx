@@ -256,7 +256,6 @@ export default function BulkImportModal({ isOpen, onClose, onImportComplete }: B
     </div>
   );
 
-  console.log('BulkImportModal render', { isOpen, step, parsedEntries, importProgress, importResult });
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Bulk Import Cards" size="lg">
       {step === 'upload' && renderUploadStep()}

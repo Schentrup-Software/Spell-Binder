@@ -1,10 +1,7 @@
-import PocketBase from 'pocketbase';
 import { Card, CardFilters, CollectionEntry, CardCondition } from './types';
 import { createAppError, withRetry, logError } from './errorHandling';
 import { COLLECTIONS } from './pocketbase';
-
-// Create a PocketBase client instance
-const pb = new PocketBase('http://localhost:8090');
+import pb from './pocketbase';
 
 /**
  * Search for cards by name and optional filters
@@ -88,7 +85,7 @@ export async function getCardSets(): Promise<{code: string, name: string}[]> {
 
     // Extract unique sets
     const sets = result.items.map((item: any) => ({
-      code: item.id,
+      code: item.id.toUpperCase(),
       name: item.name,
     }));
     
@@ -147,9 +144,6 @@ export async function addCardToCollection(
  */
 export async function getUserCollection(
   filters: CardFilters = {},
-  sortField: string = '',
-  sortDirection: 'asc' | 'desc' = 'desc',
-  searchQuery?: string,
   limit?: number,
   page?: number
 ): Promise<Card[]> {
@@ -159,14 +153,14 @@ export async function getUserCollection(
       let filterString = "";
       
       // Add search query if provided
-      if (searchQuery && searchQuery.trim()) {
-        filterString += ` && name ~ "${searchQuery.trim()}"`;
+      if (filters.searchQuery && filters.searchQuery.trim()) {
+        filterString += ` && name ~ "${filters.searchQuery.trim()}"`;
       }
 
       if (filters) {
         // Filter by set
         if (filters.set) {
-          filterString += (filterString ? ' && ' : '') + `set_code = "${filters.set}"`;
+          filterString += (filterString ? ' && ' : '') + `set_code = "${filters.set.toLocaleLowerCase()}"`;
         }
         
         // Filter by type
@@ -190,18 +184,18 @@ export async function getUserCollection(
       let sortString = '';
       
       // Handle special sort cases that need to use expanded card fields
-      if (sortField === 'name') {
+      if (filters.sort === 'name') {
         sortString = 'name';
-      } else if (sortField === 'set') {
+      } else if (filters.sort === 'set') {
         sortString = 'set_name';
-      } else if (sortField === 'rarity') {
+      } else if (filters.sort === 'rarity') {
         sortString = 'rarity';
-      } else if (sortField === 'price') {
+      } else if (filters.sort === 'price') {
         sortString = 'price_usd';
       }
 
       // Add sort direction
-      sortString = sortString ? `${sortDirection === 'asc' ? '+' : '-'}${sortString}` : '';
+      sortString = sortString ? `${filters.sortDirection === 'asc' ? '+' : '-'}${sortString}` : '';
 
       const result = await pb.collection(COLLECTIONS.CARD_COLLECTION).getList(page, limit, {
         filter: filterString,
@@ -215,7 +209,7 @@ export async function getUserCollection(
             id: item.id,
             scryfall_id: item.scryfall_id,
             name: item.name,
-            set_code: item.set_code,
+            set_code: item.set_code.toUpperCase(),
             set_name: item.set_name,
             rarity: item.rarity,
             mana_cost: item.mana_cost,

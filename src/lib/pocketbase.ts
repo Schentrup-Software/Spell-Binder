@@ -61,4 +61,5 @@ export const COLLECTIONS = {
   SYNC_STATUS: 'sync_status',
   CARD_SETS: 'card_sets',
   CARD_COLLECTION: 'card_collection',
+  USERS: 'users'
 } as const

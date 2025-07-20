@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import pb from '../lib/pocketbase'
+import pb, { COLLECTIONS } from '../lib/pocketbase'
 import { useErrorHandler } from '../hooks/useErrorHandler'
 import { useLoadingState } from '../hooks/useLoadingState'
 import LoadingSpinner from './LoadingSpinner'
@@ -31,7 +31,7 @@ export default function AuthForm() {
             if (isLogin) {
                 // Login existing user
                 await withLoading('auth', () =>
-                    pb.collection('users').authWithPassword(email, password)
+                    pb.collection(COLLECTIONS.USERS).authWithPassword(email, password)
                 )
                 handleSuccess('Welcome back!')
             } else {
@@ -45,11 +45,11 @@ export default function AuthForm() {
                 }
 
                 await withLoading('auth', () =>
-                    pb.collection('users').create(userData)
+                    pb.collection(COLLECTIONS.USERS).create(userData)
                 )
 
                 // Automatically log in after registration
-                await pb.collection('users').authWithPassword(email, password)
+                await pb.collection(COLLECTIONS.USERS).authWithPassword(email, password)
                 handleSuccess('Account created successfully! Welcome!')
             }
 

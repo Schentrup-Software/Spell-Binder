@@ -98,8 +98,10 @@ export default function FilterBar({
       }
     }
 
-    loadFilterOptions();
-  }, []);
+    if (sets.length === 0) {
+      loadFilterOptions();
+    }
+  }, [sets]);
 
   // Update local search query when prop changes
   useEffect(() => {
