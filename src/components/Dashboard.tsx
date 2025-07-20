@@ -366,17 +366,17 @@ export default function Dashboard() {
             {stats.recentlyAdded.length > 0 ? (
               <>
                 {/* Mobile card layout */}
-                <div className="block md:hidden space-y-4">
+                <div className="block md:hidden space-y-3">
                   {stats.recentlyAdded.map(entry => (
-                    <div key={entry.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start space-x-4">
+                    <div key={entry.id} className="border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-center space-x-3">
                         <div className="flex-shrink-0">
                           <CardImage
                             card={entry}
                             cardName={entry.name || 'Unknown Card'}
                             size="small"
                             quality="low"
-                            className="h-16 w-16 rounded object-cover"
+                            className="h-14 w-10 rounded-sm object-cover border border-gray-200"
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -386,7 +386,7 @@ export default function Dashboard() {
                           <div className="text-xs text-gray-500 mb-2">
                             {entry.set_name || 'Unknown'} ({entry.set_code || ''})
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
                             <span>Qty: {entry.collection.quantity}</span>
                             <span>{entry.collection.condition}{entry.collection.foil ? ' (Foil)' : ''}</span>
                             <span>{formatDate(entry.collection.acquired_date)}</span>
@@ -424,13 +424,13 @@ export default function Dashboard() {
                         <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 h-12 w-12 mr-4">
+                              <div className="flex-shrink-0 mr-4">
                                 <CardImage
                                   card={entry}
                                   cardName={entry.name || 'Unknown Card'}
                                   size="small"
                                   quality="low"
-                                  className="h-12 w-12 rounded object-cover"
+                                  className="h-14 w-10 rounded-sm object-cover border border-gray-200"
                                 />
                               </div>
                               <div>

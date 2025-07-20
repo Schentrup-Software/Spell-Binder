@@ -29,7 +29,7 @@ const MemoizedCollectionCard = memo(function CollectionCard({
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-200 active:scale-95 active:shadow-sm touch-manipulation">
       <div className="flex flex-col sm:flex-row">
         {/* Card image */}
-        <div className="sm:w-36 flex-shrink-0">
+        <div className="sm:w-36 flex-shrink-0 m-4">
           <CardImage
             card={entry}
             cardName={entry.name}
