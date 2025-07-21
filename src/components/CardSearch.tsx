@@ -52,7 +52,7 @@ export default function CardSearch() {
     }
 
     performSearch()
-  }, [debouncedSearchQuery, filters, withLoading, handleError])
+  }, [debouncedSearchQuery, filters])
 
   // Handle manual search form submission
   const handleSearch = (e: React.FormEvent) => {

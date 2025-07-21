@@ -4,6 +4,7 @@
 export interface Card {
   id: string;
   scryfall_id: string;
+  oracle_text?: string;
   name: string;
   set_code: string;
   set_name: string;

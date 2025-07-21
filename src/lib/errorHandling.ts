@@ -19,27 +19,21 @@ export interface AppError {
 // Create a standardized error from various error sources
 export function createAppError(error: any, _context?: string): AppError {
   // Handle PocketBase errors
-  if (error?.response?.data) {
-    const pbError = error.response.data
+  if (error?.response) {
+    const pbError = error.response
     
     // Handle validation errors
-    if (pbError.code === 400 && pbError.data) {
-      const fieldErrors = Object.keys(pbError.data)
-      if (fieldErrors.length > 0) {
-        const firstField = fieldErrors[0]
-        const fieldError = pbError.data[firstField]
-        return {
-          type: ErrorType.VALIDATION,
-          message: fieldError.message || 'Validation error',
-          field: firstField,
-          originalError: error,
-          retryable: false
-        }
+    if (pbError.status === 400) {
+      return {
+        type: ErrorType.VALIDATION,
+        message: pbError.message || 'Validation error',
+        originalError: error,
+        retryable: false
       }
     }
     
     // Handle not found errors
-    if (pbError.code === 404) {
+    if (pbError.status === 404) {
       return {
         type: ErrorType.NOT_FOUND,
         message: 'The requested resource was not found',
@@ -49,7 +43,7 @@ export function createAppError(error: any, _context?: string): AppError {
     }
     
     // Handle unauthorized errors
-    if (pbError.code === 401 || pbError.code === 403) {
+    if (pbError.status === 401 || pbError.status === 403) {
       return {
         type: ErrorType.UNAUTHORIZED,
         message: 'You are not authorized to perform this action',
@@ -59,7 +53,7 @@ export function createAppError(error: any, _context?: string): AppError {
     }
     
     // Handle server errors
-    if (pbError.code >= 500) {
+    if (pbError.status >= 500) {
       return {
         type: ErrorType.SERVER,
         message: 'A server error occurred. Please try again later.',
@@ -71,6 +65,7 @@ export function createAppError(error: any, _context?: string): AppError {
   
   // Handle network errors
   if (error?.code === 'NETWORK_ERROR' || error?.message?.includes('fetch')) {
+    console.error('Network error:', error);
     return {
       type: ErrorType.NETWORK,
       message: 'Network error. Please check your connection and try again.',
@@ -81,6 +76,7 @@ export function createAppError(error: any, _context?: string): AppError {
   
   // Handle timeout errors
   if (error?.code === 'TIMEOUT' || error?.message?.includes('timeout')) {
+    console.error('Timeout error:', error);
     return {
       type: ErrorType.NETWORK,
       message: 'Request timed out. Please try again.',
@@ -90,6 +86,7 @@ export function createAppError(error: any, _context?: string): AppError {
   }
   
   // Default to unknown error
+  console.error('Unknown error:', error);
   return {
     type: ErrorType.UNKNOWN,
     message: error?.message || 'An unexpected error occurred',
@@ -130,18 +127,20 @@ export async function withRetry<T>(
   maxRetries: number = 3,
   baseDelay: number = 1000
 ): Promise<T> {
-  let lastError: any
+  let lastAppError: AppError | null = null
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await operation()
-    } catch (error) {
-      lastError = error
+    } catch (error: any) {
+      if (error?.retryable === undefined) {
+        throw error // If error does not have retryable property, rethrow it
+      }
+
+      lastAppError = error
       
-      const appError = createAppError(error)
-      
-      // Don't retry if error is not retryable
-      if (!appError.retryable || attempt === maxRetries) {
+      // Don't retry if error is not retryable or we've reached max retries
+      if (!error.retryable || attempt === maxRetries) {
         throw error
       }
       
@@ -151,7 +150,8 @@ export async function withRetry<T>(
     }
   }
   
-  throw lastError
+  // This should never be reached, but just in case
+  throw lastAppError || createAppError(new Error('Max retries exceeded'))
 }
 
 // Debounced error handler for form validation

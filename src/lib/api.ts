@@ -232,6 +232,7 @@ function createCardFromRecord(item: RecordModel, collectionEntry?: CollectionEnt
     id: item.id,
     scryfall_id: item.scryfall_id,
     name: item.name,
+    oracle_text: item.oracle_text,
     set_code: item.set_code.toUpperCase(),
     set_name: item.set_name,
     rarity: item.rarity,
