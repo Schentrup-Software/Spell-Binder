@@ -3,6 +3,7 @@ import { createAppError, withRetry, logError } from './errorHandling';
 import { COLLECTIONS } from './pocketbase';
 import pb from './pocketbase';
 import { RecordModel } from 'pocketbase';
+import { forEach } from 'lodash';
 
 /**
  * Search for cards by name and optional filters
@@ -19,37 +20,40 @@ export async function searchCards(
   return withRetry(async () => {
     try {
       // Build filter string
-      let filterString = `name ~ "${query}"`;
+      let filterString = `searchText="${encodeURIComponent(query.trim())}"`;
       
       // Add set filter if provided
       if (filters.set) {
-        filterString += ` && set_code = "${filters.set}"`;
+        filterString += `&set_code="${filters.set}"`;
       }
       
       // Add type filter if provided
       if (filters.type) {
-        filterString += ` && type_line ~ "${filters.type}"`;
+        filterString += `&type_line="${filters.type}"`;
       }
       
       // Add rarity filter if provided
       if (filters.rarity) {
-        filterString += ` && rarity = "${filters.rarity}"`;
+        filterString += `&rarity="${filters.rarity}"`;
       }
       
       // Add color filter if provided
       if (filters.color && filters.color.length > 0) {
-        // For each color, check if it's in the colors array
-        const colorFilters = filters.color.map(color => `colors ?~ "${color}"`);
-        filterString += ` && (${colorFilters.join(' || ')})`;
+        forEach(filters.color, (color) => {
+          filterString += `&colors[]="${color}"`;
+        });
       }
       
       // Execute the search
-      const result = await pb.collection(COLLECTIONS.CARDS).getList(1, limit, {
-        filter: filterString,
-        sort: 'name',
-      });
+      const result = await fetch(`${pb.baseUrl}/api/cards?${filterString}&pageSize=${limit}`);
       
-      return result.items.map((item: RecordModel) => createCardFromRecord(item));
+      if (!result.ok) {
+        throw new Error(`Failed to fetch cards: ${result.statusText}`);
+      }
+
+      const data = await result.json();
+
+      return data.items.map((item: RecordModel) => createCardFromRecord(item));
     } catch (error) {
       const appError = createAppError(error, 'Card search');
       logError(appError, 'searchCards');
@@ -155,7 +159,7 @@ export async function getUserCollection(
       
       // Add search query if provided
       if (filters.searchQuery && filters.searchQuery.trim()) {
-        filterString += `name ~ "${filters.searchQuery.trim()}"`;
+        filterString += `name ~ "${filters.searchQuery.trim()}" || oracle_text ~ "${filters.searchQuery.trim()}"`;
       }
 
       if (filters) {

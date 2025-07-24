@@ -71,7 +71,7 @@ migrate((db) => {
             {
                 "name": "type_line",
                 "type": "text",
-                "required": true,
+                "required": false,
                 "min": 1,
                 "max": 255
             },
@@ -522,7 +522,7 @@ migrate((db) => {
 
     db.save(syncStatusCollection);
 }, (db) => {
-    db.deleteCollection("collections");
-    db.deleteCollection("cards");
-    db.deleteCollection("sync_status");
+    db.delete(db.findCollectionByNameOrId("collections"));
+    db.delete(db.findCollectionByNameOrId("sync_status"));
+    db.delete(db.findCollectionByNameOrId("cards"));
 });

@@ -9,6 +9,7 @@ RUN apk update && apk upgrade && \
     wget \
     zip \
     git \
+    sqlite3 \
     && rm -rf /var/cache/apk/*
 
 #Install nodejs and npm

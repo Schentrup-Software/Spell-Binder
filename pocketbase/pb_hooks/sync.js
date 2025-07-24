@@ -82,12 +82,15 @@ function processBatch(cards, batchNumber, totalBatches) {
     let processedCount = 0
     let errorCount = 0
 
+    let batchOfOracleIds = []
+    let oracleBatchSize = 0
+
     for (const cardData of cards) {
         try {
             // Skip cards without required fields
-            if (!cardData.id || !cardData.name || !cardData.set || !cardData.type_line) {
+            if (!cardData.id || !cardData.name || !cardData.set) {
                 console.log("Skipping " + (cardData.name || cardData.id) + " with missing required fields: " + (
-                    !cardData.id ? "id" : "") + (cardData.name ? ", name" : "") + (cardData.set ? ", set" : "") + (cardData.type_line ? ", type_line" : "")
+                    !cardData.id ? "id" : "") + (!cardData.name ? ", name" : "") + (!cardData.set ? ", set" : "")
                 )
                 continue
             }
@@ -125,7 +128,7 @@ function processBatch(cards, batchNumber, totalBatches) {
 
             // Game mechanics
             cardRecord.set("cmc", cardData.cmc || 0)
-            cardRecord.set("type_line", cardData.type_line)
+            cardRecord.set("type_line", cardData.type_line || "")
             cardRecord.set("color_identity", cardData.color_identity || [])
             cardRecord.set("colors", cardData.colors || [])
             cardRecord.set("keywords", cardData.keywords || [])
@@ -257,15 +260,69 @@ function processBatch(cards, batchNumber, totalBatches) {
             cardRecord.set("last_updated", new DateTime())
 
             $app.save(cardRecord)
-            processedCount++
 
+            if (cardData.oracle_id && cardData.oracle_text) {
+                batchOfOracleIds.push({
+                    oracle_id: cardData.oracle_id,
+                    oracle_text: cardData.oracle_text
+                })
+                oracleBatchSize++
+            }
+
+            processedCount++
         } catch (error) {
             errorCount++
             console.error("Error processing card " + cardData?.name + ": " + error.message)
         }
     }
 
+    // Insert any remaining oracle texts
+    if (oracleBatchSize > 0) {
+        insertOracleTexts(batchOfOracleIds, batchNumber, totalBatches)
+    }
+
     return processedCount
+}
+
+function insertOracleTexts(batchOfOracleIds, batchNumber, totalBatches) {
+    const startTime = new Date()
+    const existing = arrayOf(new DynamicModel({ "oracle_id": "" }));
+    $app.db()
+        .select("oracle_id")
+        .from("oracle_text_fts")
+        .where($dbx.in("oracle_id", ...Object.keys(batchOfOracleIds)))
+        .limit(BATCH_SIZE)
+        .all(existing)
+
+    // Turn into ditionary for faster lookup
+    const existingOracleIds = new Set(existing.map(record => record.oracle_id))
+    // Filter out already existing oracle texts
+    const newOracleIds = batchOfOracleIds
+        .filter(({ oracle_id }) => !existingOracleIds.has(oracle_id))
+
+    if (newOracleIds.length === 0) {
+        console.log(`No new oracle texts to insert for batch ${batchNumber}/${totalBatches}`)
+        return
+    }
+
+    const result = $app.db()
+        .newQuery(
+            "INSERT INTO oracle_text_fts (oracle_id, oracle_text) VALUES " + newOracleIds.map((value, index) => `({:oracle_id_${index}}, {:oracle_text_${index}})`).join(", ")
+        ).bind(
+            newOracleIds.reduce((acc, value, index) => {
+                acc[`oracle_id_${index}`] = value.oracle_id;
+                acc[`oracle_text_${index}`] = value.oracle_text;
+                return acc;
+            }, {})
+        ).execute()
+    const endTime = new Date()
+
+    if (result.rowsAffected() === 0) {
+        console.warn(`Failed to insert oracle text for card ${cardData.name} (${cardData.oracle_id})`)
+    } else {
+        const timeToRun = (endTime - startTime) / 1000 // Convert to seconds
+        console.log(`Inserted ${result.rowsAffected()} oracle texts in batch ${batchNumber}/${totalBatches} in ${timeToRun} seconds`)
+    }
 }
 
 // Main sync function to download and process bulk card data
