@@ -7,7 +7,7 @@ migrate((db) => {
   collection.removeIndex("idx_cards_artist")
   collection.removeIndex("idx_cards_cmc")
 
-  db.db().newQuery("CREATE VIRTUAL TABLE oracle_text_fts USING fts5(oracle_id, oracle_text);").execute();
+  db.db().newQuery("CREATE VIRTUAL TABLE search_text_fts USING fts5(card_id, name, oracle_text);").execute();
 }, (db) => {
   const collection = db.findCollectionByNameOrId("cards")
 
@@ -16,5 +16,5 @@ migrate((db) => {
   collection.addIndex("idx_cards_artist", false, "artist")
   collection.addIndex("idx_cards_cmc", false, "cmc")
 
-  db.db().newQuery("DROP TABLE oracle_text_fts;").execute();
+  db.db().newQuery("DROP TABLE search_text_fts;").execute();
 })

@@ -23,7 +23,7 @@ export default function FilterBar({
   onSearchChange,
   isCollectionView = false
 }: FilterBarProps) {
-  const [sets, setSets] = useState<{ code: string, name: string }[]>([]);
+  const [sets, setSets] = useState<{ code: string, name: string }[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
@@ -98,7 +98,7 @@ export default function FilterBar({
       }
     }
 
-    if (sets.length === 0) {
+    if (sets === null) {
       loadFilterOptions();
     }
   }, [sets]);
@@ -272,7 +272,7 @@ export default function FilterBar({
             disabled={isLoading}
           >
             <option value="">All Sets</option>
-            {sets.map(set => (
+            {sets?.map(set => (
               <option key={set.code} value={set.code}>
                 {set.name} ({set.code})
               </option>

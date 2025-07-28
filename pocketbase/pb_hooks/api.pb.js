@@ -20,35 +20,34 @@ routerAdd("GET", "/api/cards", (e) => {
     const colors = e.request.url.query().get("colors");
 
     const cards = $app.db()
-        .select("c.*")
-        .from("cards as c")
-        .join("LEFT JOIN", "oracle_text_fts as o", $dbx.exp("o.oracle_id = c.oracle_id"))
-        .where($dbx.exp("c.id IS NOT NULL"));
-
-    // Apply filters
-    if (searchText) {
-        cards.andWhere($dbx.or(
-            $dbx.exp("o.oracle_text = {:searchText}", { searchText }),
-            $dbx.exp("c.name LIKE {:searchText}", { searchText: `%${searchText}%` }),
-        ));
-    }
-    if (setCode) {
-        cards.andWhere($dbx.exp("c.set_code = {:setCode}", { setCode }));
-    }
-    if (typeLine) {
-        cards.andWhere($dbx.exp("c.type_line = {:typeLine}", { typeLine }));
-    }
-    if (rarity) {
-        cards.andWhere($dbx.exp("c.rarity = {:rarity}", { rarity }));
-    }
-    if (colors) {
-        cards.andWhere($dbx.exp("c.colors IN (:colors)", { colors: colors.split(",") }));
-    }
-
-    // Apply pagination
-    cards.limit(pageSize)
-        .offset((page - 1) * pageSize)
-        .orderBy("rank");
+        .newQuery(`
+            SELECT DISTINCT
+                c.*
+            FROM search_text_fts s
+            JOIN cards c ON c.scryfall_id = s.card_id
+            WHERE 
+                ${searchText ? "search_text_fts MATCH {:searchText}" : "1=1"}
+                AND ({:setCode} IS NULL OR c.set_code = {:setCode})
+                AND ({:typeLine} IS NULL OR c.type_line = {:typeLine})
+                AND ({:rarity} IS NULL OR c.rarity = {:rarity})
+                AND ({:colors} IS NULL OR c.colors IN ({:colors}))
+            GROUP BY c.name
+            ORDER BY 
+                IF(c.name = {:searchText}, 1, 0) DESC,
+                IF(c.name LIKE {:searchTextLike}, 1, 0) DESC,
+                s.rank DESC,
+                c.name
+            LIMIT {:pageSize} OFFSET {:offset};
+        `).bind({
+            pageSize,
+            offset: (page - 1) * pageSize,
+            searchText: searchText,
+            searchTextLike: `%${searchText}%`,
+            setCode: setCode || null,
+            typeLine: typeLine || null,
+            rarity: rarity || null,
+            colors: colors ? colors.split(",") : null,
+        });
 
     const result = arrayOf(new DynamicModel({
         "id": "",
@@ -64,7 +63,7 @@ routerAdd("GET", "/api/cards", (e) => {
         "image_uri": "",
         "image_uri_small": "",
         "image_file": "",
-        "price_usd": 0,
+        "price_usd": -0,
         "last_updated": ""
     }))
     cards.all(result)

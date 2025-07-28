@@ -82,8 +82,13 @@ function processBatch(cards, batchNumber, totalBatches) {
     let processedCount = 0
     let errorCount = 0
 
-    let batchOfOracleIds = []
-    let oracleBatchSize = 0
+    let batchOfSearchableCards = []
+    let existingRecords = arrayOf(new Record);
+    $app.recordQuery("cards")
+        .where($dbx.in("scryfall_id", ...cards.map(card => card.id)))
+        .all(existingRecords)
+
+    const existingCardIds = new Map(existingRecords.map(record => [record.get("scryfall_id"), record]))
 
     for (const cardData of cards) {
         try {
@@ -96,16 +101,7 @@ function processBatch(cards, batchNumber, totalBatches) {
             }
 
             // Check if card already exists
-            let cardRecord = null
-            try {
-                const existingRecords = $app.findRecordsByFilter("cards", `scryfall_id = "${cardData.id}"`, "", 1, 0)
-                if (existingRecords.length > 0) {
-                    cardRecord = existingRecords[0]
-                }
-            } catch (err) {
-                // Card doesn't exist, will create new one
-            }
-
+            let cardRecord = existingCardIds.get(cardData.id) || null
             if (!cardRecord) {
                 cardRecord = new Record(cardsCollection)
                 cardRecord.set("scryfall_id", cardData.id)
@@ -258,16 +254,13 @@ function processBatch(cards, batchNumber, totalBatches) {
 
             // Update timestamp
             cardRecord.set("last_updated", new DateTime())
+            $app.saveNoValidate(cardRecord)
 
-            $app.save(cardRecord)
-
-            if (cardData.oracle_id && cardData.oracle_text) {
-                batchOfOracleIds.push({
-                    oracle_id: cardData.oracle_id,
-                    oracle_text: cardData.oracle_text
-                })
-                oracleBatchSize++
-            }
+            batchOfSearchableCards.push({
+                card_id: cardData.id,
+                name: cardData.name,
+                oracle_text: cardData.oracle_text
+            })
 
             processedCount++
         } catch (error) {
@@ -276,41 +269,39 @@ function processBatch(cards, batchNumber, totalBatches) {
         }
     }
 
-    // Insert any remaining oracle texts
-    if (oracleBatchSize > 0) {
-        insertOracleTexts(batchOfOracleIds, batchNumber, totalBatches)
-    }
+    insertSearchData(batchOfSearchableCards, batchNumber, totalBatches)
 
     return processedCount
 }
 
-function insertOracleTexts(batchOfOracleIds, batchNumber, totalBatches) {
+function insertSearchData(batchOfSearchableCards, batchNumber, totalBatches) {
     const startTime = new Date()
-    const existing = arrayOf(new DynamicModel({ "oracle_id": "" }));
+    const existing = arrayOf(new DynamicModel({ "card_id": "" }));
     $app.db()
-        .select("oracle_id")
-        .from("oracle_text_fts")
-        .where($dbx.in("oracle_id", ...Object.keys(batchOfOracleIds)))
+        .select("card_id")
+        .from("search_text_fts")
+        .where($dbx.in("card_id", ...batchOfSearchableCards.map(card => card.card_id)))
         .limit(BATCH_SIZE)
         .all(existing)
 
     // Turn into ditionary for faster lookup
-    const existingOracleIds = new Set(existing.map(record => record.oracle_id))
-    // Filter out already existing oracle texts
-    const newOracleIds = batchOfOracleIds
-        .filter(({ oracle_id }) => !existingOracleIds.has(oracle_id))
+    const existingCardIds = new Set(existing.map(record => record.card_id))
 
-    if (newOracleIds.length === 0) {
-        console.log(`No new oracle texts to insert for batch ${batchNumber}/${totalBatches}`)
+    const newCardIds = batchOfSearchableCards
+        .filter(({ card_id }) => !existingCardIds.has(card_id))
+
+    if (newCardIds.length === 0) {
+        console.log(`No new search texts to insert for batch ${batchNumber}/${totalBatches}`)
         return
     }
 
     const result = $app.db()
         .newQuery(
-            "INSERT INTO oracle_text_fts (oracle_id, oracle_text) VALUES " + newOracleIds.map((value, index) => `({:oracle_id_${index}}, {:oracle_text_${index}})`).join(", ")
+            "INSERT INTO search_text_fts (card_id, name, oracle_text) VALUES " + newCardIds.map((value, index) => `({:card_id_${index}}, {:name_${index}}, {:oracle_text_${index}})`).join(", ")
         ).bind(
-            newOracleIds.reduce((acc, value, index) => {
-                acc[`oracle_id_${index}`] = value.oracle_id;
+            newCardIds.reduce((acc, value, index) => {
+                acc[`card_id_${index}`] = value.card_id;
+                acc[`name_${index}`] = value.name;
                 acc[`oracle_text_${index}`] = value.oracle_text;
                 return acc;
             }, {})
@@ -318,10 +309,10 @@ function insertOracleTexts(batchOfOracleIds, batchNumber, totalBatches) {
     const endTime = new Date()
 
     if (result.rowsAffected() === 0) {
-        console.warn(`Failed to insert oracle text for card ${cardData.name} (${cardData.oracle_id})`)
+        console.warn(`Failed to insert search text for card ${cardData.name} (${cardData.oracle_id})`)
     } else {
         const timeToRun = (endTime - startTime) / 1000 // Convert to seconds
-        console.log(`Inserted ${result.rowsAffected()} oracle texts in batch ${batchNumber}/${totalBatches} in ${timeToRun} seconds`)
+        console.log(`Inserted ${result.rowsAffected()} search texts in batch ${batchNumber}/${totalBatches} in ${timeToRun} seconds`)
     }
 }
 
