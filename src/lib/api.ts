@@ -14,7 +14,8 @@ import { RecordModel } from 'pocketbase';
 export async function searchCards(
   query: string, 
   filters: CardFilters = {}, 
-  limit: number = 20
+  pageSize: number = 20,
+  page: number = 1
 ): Promise<Card[]> {
   return withRetry(async () => {
     try {
@@ -42,7 +43,7 @@ export async function searchCards(
       }
       
       // Execute the search
-      const result = await fetch(`${pb.baseUrl}/api/cards?${filterString}&pageSize=${limit}`);
+      const result = await fetch(`${pb.baseUrl}/api/cards?${filterString}&pageSize=${pageSize}&page=${page}`);
       
       if (!result.ok) {
         throw new Error(`Failed to fetch cards: ${result.statusText}`);
@@ -243,7 +244,8 @@ function createCardFromRecord(item: RecordModel, collectionEntry?: CollectionEnt
     mana_cost: item.mana_cost,
     type_line: item.type_line,
     colors: item.colors,
-    image_uri: item.image_uris?.normal
+    image_uri: item.image_uri 
+      ?? item.image_uris?.normal
       ?? item.image_uris?.png
       ?? item.image_uris?.art_crop
       ?? item.image_uris?.border_crop

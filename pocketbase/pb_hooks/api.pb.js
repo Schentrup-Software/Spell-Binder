@@ -20,12 +20,32 @@ routerAdd("GET", "/api/cards", (e) => {
     const colors = e.request.url.query().get("colors")
         ?.split(",")?.map(c => c.trim().toLocaleLowerCase())?.filter(c => c.length > 0) || [];
 
-    console.log(JSON.stringify({ colors }));
-
     const cards = $app.db()
         .newQuery(`
             SELECT DISTINCT
-                c.*
+                c.id,
+                c.scryfall_id,
+                c.name,
+                c.oracle_text,
+                c.set_code,
+                c.set_name,
+                c.rarity,
+                c.mana_cost,
+                c.type_line,
+                c.colors,
+                COALESCE(
+                    JSON_EXTRACT(c.image_uris, '$.normal'),
+                    JSON_EXTRACT(c.image_uris, '$.png'),
+                    JSON_EXTRACT(c.image_uris, '$.art_crop'),
+                    JSON_EXTRACT(c.image_uris, '$.border_crop'),
+                    JSON_EXTRACT(c.image_uris, '$.large'),
+                    JSON_EXTRACT(c.image_uris, '$.small'),
+                    ''
+                ) AS image_uri,
+                COALESCE(JSON_EXTRACT(c.image_uris, '$.small'), '') AS image_uri_small,
+                c.image_file,
+                c.price_usd,
+                c.last_updated
             FROM search_text_fts s
             JOIN cards c ON c.scryfall_id = s.card_id
             WHERE 

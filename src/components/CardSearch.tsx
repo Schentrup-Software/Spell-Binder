@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import PageHeader from './PageHeader'
 import LoadingSpinner from './LoadingSpinner'
 import SkeletonLoader from './SkeletonLoader'
@@ -16,11 +16,19 @@ import { useLoadingState } from '../hooks/useLoadingState'
 
 export default function CardSearch() {
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<Card[] | null>(null)
+  const [searchResults, setSearchResults] = useState<Card[]>([])
   const [filters, setFilters] = useState<CardFilters>({})
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasSearched, setHasSearched] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+
+  // Ref for infinite scroll observer
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Hooks for error handling and loading states
   const { handleError, handleSuccess } = useErrorHandler({ context: 'Card Search' })
@@ -29,30 +37,111 @@ export default function CardSearch() {
   // Debounce search query to avoid excessive API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
 
-  // Perform search when debounced query or filters change
-  useEffect(() => {
-    async function performSearch() {
-      // Don't search if query is empty
-      if (!debouncedSearchQuery.trim()) {
-        setSearchResults(null)
-        return
-      }
+  // Load more cards function
+  const loadMoreCards = useCallback(async (currentPage: number, isNewSearch: boolean = false) => {
+    if (!debouncedSearchQuery.trim()) return
 
-      try {
+    try {
+      if (isNewSearch) {
         const results = await withLoading('search', () =>
-          searchCards(debouncedSearchQuery, filters)
+          searchCards(debouncedSearchQuery, filters, 20, 1)
         )
         setSearchResults(results)
-        setError(null)
-      } catch (err) {
+        setHasMore(results.length === 20)
+        setPage(2)
+        setHasSearched(true)
+      } else {
+        setIsLoadingMore(true)
+        const results = await searchCards(debouncedSearchQuery, filters, 20, currentPage)
+
+        if (results.length === 0) {
+          setHasMore(false)
+        } else {
+          // Filter out any duplicates that might exist
+          setSearchResults(prev => {
+            const existingIds = new Set(prev.map(card => card.id))
+            const newCards = results.filter(card => !existingIds.has(card.id))
+            return [...prev, ...newCards]
+          })
+          setHasMore(results.length === 20)
+          setPage(currentPage + 1)
+        }
+        setIsLoadingMore(false)
+      }
+      setError(null)
+    } catch (err) {
+      if (isNewSearch) {
         handleError(err, 'Search failed')
         setError('An error occurred while searching. Please try again.')
-        setSearchResults(null)
+        setSearchResults([])
+      } else {
+        setIsLoadingMore(false)
+        handleError(err, 'Failed to load more results')
+      }
+    }
+  }, [debouncedSearchQuery, filters, withLoading, handleError])
+
+  // Perform search when debounced query or filters change
+  useEffect(() => {
+    if (!debouncedSearchQuery.trim()) {
+      setSearchResults([])
+      setHasSearched(false)
+      setHasMore(true)
+      setPage(1)
+      return
+    }
+
+    // Reset pagination for new search
+    setPage(1)
+    setHasMore(true)
+    loadMoreCards(1, true)
+  }, [debouncedSearchQuery, filters, loadMoreCards])
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0]
+        if (target.isIntersecting && hasMore && !isLoadingMore && !isLoading('search') && hasSearched) {
+          loadMoreCards(page)
+        }
+      },
+      {
+        root: null,
+        rootMargin: '100px',
+        threshold: 0.1
+      }
+    )
+
+    const currentRef = loadMoreRef.current
+    if (currentRef) {
+      observer.observe(currentRef)
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef)
+      }
+    }
+  }, [hasMore, isLoadingMore, isLoading, hasSearched, page, loadMoreCards])
+
+  // Keyboard shortcut to focus search input
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Focus search input on "/" key (like GitHub)
+      if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        const target = event.target as HTMLElement
+        // Don't trigger if user is typing in an input or textarea
+        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+          event.preventDefault()
+          searchInputRef.current?.focus()
+        }
       }
     }
 
-    performSearch()
-  }, [debouncedSearchQuery, filters])
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Handle manual search form submission
   const handleSearch = (e: React.FormEvent) => {
@@ -64,6 +153,9 @@ export default function CardSearch() {
   // Handle filter changes
   const handleFilterChange = (newFilters: CardFilters) => {
     setFilters(newFilters)
+    // Reset pagination when filters change
+    setPage(1)
+    setHasMore(true)
   }
 
   // Handle card selection
@@ -112,11 +204,12 @@ export default function CardSearch() {
                   <label htmlFor="search" className="sr-only">Search cards</label>
                   <div className="relative rounded-md shadow-sm">
                     <input
+                      ref={searchInputRef}
                       type="text"
                       id="search"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search by card name..."
+                      placeholder="Search by card name... (Press '/' to focus)"
                       className="block w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
                       autoComplete="off"
                     />
@@ -168,11 +261,16 @@ export default function CardSearch() {
                   Counterspell
                 </button>
               </div>
+              {hasSearched && searchResults.length > 0 && (
+                <div className="mt-2 text-xs text-gray-500">
+                  💡 Scroll down or click "Load More" to see additional results
+                </div>
+              )}
             </div>
           </div>
 
           {/* Show filters if there are search results */}
-          {searchResults !== null && (
+          {hasSearched && (
             <div className="border-t border-gray-200">
               <FilterBar filters={filters} onFilterChange={handleFilterChange} />
             </div>
@@ -194,10 +292,11 @@ export default function CardSearch() {
                   Please try again or refine your search query.
                 </p>
               </div>
-            ) : searchResults && searchResults.length > 0 ? (
+            ) : searchResults.length > 0 ? (
               <div className="p-4">
                 <div className="mb-4 text-sm text-gray-500">
                   Found {searchResults.length} {searchResults.length === 1 ? 'card' : 'cards'}
+                  {hasMore && ' (showing partial results)'}
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   {searchResults.map(card => (
@@ -208,8 +307,37 @@ export default function CardSearch() {
                     />
                   ))}
                 </div>
+
+                {/* Infinite scroll trigger */}
+                {hasMore && (
+                  <div ref={loadMoreRef} className="mt-6 flex flex-col items-center space-y-4">
+                    {isLoadingMore ? (
+                      <div className="flex items-center justify-center py-4">
+                        <LoadingSpinner size="small" />
+                        <span className="ml-2 text-sm text-gray-500">Loading more cards...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="h-4" />
+                        <button
+                          onClick={() => loadMoreCards(page)}
+                          disabled={isLoadingMore}
+                          className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-600 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Load More Cards
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {!hasMore && searchResults.length > 20 && (
+                  <div className="mt-6 text-center text-sm text-gray-500">
+                    End of results
+                  </div>
+                )}
               </div>
-            ) : searchResults && searchResults.length === 0 && searchQuery.trim() ? (
+            ) : hasSearched && searchResults.length === 0 && searchQuery.trim() ? (
               <div className="text-center py-12">
                 <p className="text-gray-500">
                   No cards found matching "{searchQuery}".
