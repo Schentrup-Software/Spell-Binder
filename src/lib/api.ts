@@ -3,7 +3,6 @@ import { createAppError, withRetry, logError } from './errorHandling';
 import { COLLECTIONS } from './pocketbase';
 import pb from './pocketbase';
 import { RecordModel } from 'pocketbase';
-import { forEach } from 'lodash';
 
 /**
  * Search for cards by name and optional filters
@@ -20,28 +19,26 @@ export async function searchCards(
   return withRetry(async () => {
     try {
       // Build filter string
-      let filterString = `searchText="${encodeURIComponent(query.trim())}"`;
+      let filterString = `searchText=${encodeURIComponent(query.trim())}`;
       
       // Add set filter if provided
       if (filters.set) {
-        filterString += `&set_code="${filters.set}"`;
+        filterString += `&setCode=${filters.set}`;
       }
       
       // Add type filter if provided
       if (filters.type) {
-        filterString += `&type_line="${filters.type}"`;
+        filterString += `&typeLine=${filters.type}`;
       }
       
       // Add rarity filter if provided
       if (filters.rarity) {
-        filterString += `&rarity="${filters.rarity}"`;
+        filterString += `&rarity=${filters.rarity}`;
       }
       
       // Add color filter if provided
       if (filters.color && filters.color.length > 0) {
-        forEach(filters.color, (color) => {
-          filterString += `&colors[]="${color}"`;
-        });
+        filterString += `&colors=${filters.color.join(",")}`;
       }
       
       // Execute the search
@@ -81,17 +78,20 @@ export async function getCardById(id: string): Promise<Card> {
 }
 
 /**
- * Get available card sets for filtering
+ * Get users available card sets for filtering
  * @returns Promise with array of unique set objects
  */
-export async function getCardSets(): Promise<{code: string, name: string}[]> {
+export async function getCardSets(isCollectionView: boolean): Promise<{code: string, name: string}[]> {
   try {
-    const result = await pb.collection(COLLECTIONS.CARD_SETS).getList();
+    const collectionName = isCollectionView ? COLLECTIONS.CARD_SETS : COLLECTIONS.ALL_CARD_SETS;
+    const result = await pb.collection(collectionName).getList(1, 500, {
+      sort: 'set_name'
+    });
 
     // Extract unique sets
     const sets = result.items.map((item: any) => ({
-      code: item.id.toUpperCase(),
-      name: item.name,
+      code: isCollectionView ? item.id.toUpperCase() : item.set_code.toUpperCase(),
+      name: isCollectionView ? item.name : item.set_name,
     }));
     
     return sets;

@@ -14,10 +14,13 @@ routerAdd("GET", "/api/cards", (e) => {
 
     // Get filters
     const searchText = e.request.url.query().get("searchText")
-    const setCode = e.request.url.query().get("set_code");
-    const typeLine = e.request.url.query().get("type_line");
+    const setCode = e.request.url.query().get("setCode");
+    const typeLine = e.request.url.query().get("typeLine");
     const rarity = e.request.url.query().get("rarity");
-    const colors = e.request.url.query().get("colors");
+    const colors = e.request.url.query().get("colors")
+        ?.split(",")?.map(c => c.trim().toLocaleLowerCase())?.filter(c => c.length > 0) || [];
+
+    console.log(JSON.stringify({ colors }));
 
     const cards = $app.db()
         .newQuery(`
@@ -26,11 +29,20 @@ routerAdd("GET", "/api/cards", (e) => {
             FROM search_text_fts s
             JOIN cards c ON c.scryfall_id = s.card_id
             WHERE 
-                ${searchText ? "search_text_fts MATCH {:searchText}" : "1=1"}
+                search_text_fts MATCH {:searchText}
                 AND ({:setCode} IS NULL OR c.set_code = {:setCode})
                 AND ({:typeLine} IS NULL OR c.type_line = {:typeLine})
                 AND ({:rarity} IS NULL OR c.rarity = {:rarity})
-                AND ({:colors} IS NULL OR c.colors IN ({:colors}))
+                AND ({:colorsIsNull} IS NULL OR EXISTS (
+                        SELECT 1
+                        FROM json_each(c.colors)
+                        WHERE (value = 'R' AND {:hasRed} IS NOT NULL)
+                           OR (value = 'G' AND {:hasGreen} IS NOT NULL)
+                           OR (value = 'U' AND {:hasBlue} IS NOT NULL)
+                           OR (value = 'W' AND {:hasWhite} IS NOT NULL)
+                           OR (value = 'B' AND {:hasBlack} IS NOT NULL)
+                    )
+                )
             GROUP BY c.name
             ORDER BY 
                 IF(c.name = {:searchText}, 1, 0) DESC,
@@ -46,7 +58,12 @@ routerAdd("GET", "/api/cards", (e) => {
             setCode: setCode || null,
             typeLine: typeLine || null,
             rarity: rarity || null,
-            colors: colors ? colors.split(",") : null,
+            colorsIsNull: colors.length === 0 ? null : false,
+            hasRed: colors.includes("r") ? true : null,
+            hasGreen: colors.includes("g") ? true : null,
+            hasBlue: colors.includes("u") ? true : null,
+            hasWhite: colors.includes("w") ? true : null,
+            hasBlack: colors.includes("b") ? true : null,
         });
 
     const result = arrayOf(new DynamicModel({

@@ -172,7 +172,7 @@ export default function CardSearch() {
           </div>
 
           {/* Show filters if there are search results */}
-          {(searchResults?.length ?? 0) > 0 && (
+          {searchResults !== null && (
             <div className="border-t border-gray-200">
               <FilterBar filters={filters} onFilterChange={handleFilterChange} />
             </div>

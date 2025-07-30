@@ -256,6 +256,11 @@ function processBatch(cards, batchNumber, totalBatches) {
             cardRecord.set("last_updated", new DateTime())
             $app.saveNoValidate(cardRecord)
 
+            // Add card set to all_card_sets collection if it has set information
+            if (cardData.set && cardData.set_name) {
+                insertOrUpdateCardSet(cardData.set, cardData.set_name)
+            }
+
             batchOfSearchableCards.push({
                 card_id: cardData.id,
                 name: cardData.name,
@@ -272,6 +277,34 @@ function processBatch(cards, batchNumber, totalBatches) {
     insertSearchData(batchOfSearchableCards, batchNumber, totalBatches)
 
     return processedCount
+}
+
+// Insert or update a card set in the all_card_sets collection
+function insertOrUpdateCardSet(setCode, setName) {
+    try {
+        const allCardSetsCollection = $app.findCollectionByNameOrId("all_card_sets")
+
+        // Check if the set already exists
+        let setRecord = null
+        try {
+            const existingSets = $app.findRecordsByFilter("all_card_sets", `set_code = "${setCode}"`, "", 1, 0)
+            if (existingSets.length > 0) {
+                setRecord = existingSets[0]
+            }
+        } catch (err) {
+            // Set doesn't exist, will create new one
+        }
+
+        if (!setRecord) {
+            // Create new set record
+            setRecord = new Record(allCardSetsCollection)
+            setRecord.set("set_code", setCode)
+            setRecord.set("set_name", setName)
+            $app.save(setRecord)
+        }
+    } catch (error) {
+        console.error(`Error inserting/updating card set ${setCode}: ${error.message}`)
+    }
 }
 
 function insertSearchData(batchOfSearchableCards, batchNumber, totalBatches) {

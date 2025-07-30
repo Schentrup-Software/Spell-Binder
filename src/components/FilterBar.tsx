@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CardFilters, CardCondition, SortField, SortDirection } from '../lib/types';
 import { getCardSets } from '../lib/api';
 
@@ -27,6 +27,9 @@ export default function FilterBar({
   const [isLoading, setIsLoading] = useState(true);
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const [setSearchQuery, setSetSearchQuery] = useState('');
+  const [isSetDropdownOpen, setIsSetDropdownOpen] = useState(false);
+  const setDropdownRef = useRef<HTMLDivElement>(null);
 
   // Available rarities
   const rarities = [
@@ -88,7 +91,7 @@ export default function FilterBar({
     async function loadFilterOptions() {
       setIsLoading(true);
       try {
-        const setsData = await getCardSets();
+        const setsData = await getCardSets(isCollectionView);
 
         setSets(setsData);
       } catch (error) {
@@ -101,12 +104,32 @@ export default function FilterBar({
     if (sets === null) {
       loadFilterOptions();
     }
-  }, [sets]);
+  }, [sets, isCollectionView]);
 
   // Update local search query when prop changes
   useEffect(() => {
     setLocalSearchQuery(searchQuery);
   }, [searchQuery]);
+
+  // Handle clicks outside the set dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (setDropdownRef.current && !setDropdownRef.current.contains(event.target as Node)) {
+        setIsSetDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Filter sets based on search query
+  const filteredSets = sets?.filter(set =>
+    set.name.toLowerCase().includes(setSearchQuery.toLowerCase()) ||
+    set.code.toLowerCase().includes(setSearchQuery.toLowerCase())
+  ) || [];
 
   // Handle set change
   const handleSetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -195,6 +218,8 @@ export default function FilterBar({
       onSearchChange('');
     }
     setLocalSearchQuery('');
+    setSetSearchQuery('');
+    setIsSetDropdownOpen(false);
   };
 
   // Toggle advanced filters
@@ -260,24 +285,80 @@ export default function FilterBar({
       {/* Basic filters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Set filter */}
-        <div>
+        <div ref={setDropdownRef} className="relative">
           <label htmlFor="set-filter" className="block text-sm font-medium text-gray-700 mb-1">
             Set
           </label>
-          <select
-            id="set-filter"
-            value={filters.set || ''}
-            onChange={handleSetChange}
-            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-            disabled={isLoading}
-          >
-            <option value="">All Sets</option>
-            {sets?.map(set => (
-              <option key={set.code} value={set.code}>
-                {set.name} ({set.code})
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsSetDropdownOpen(!isSetDropdownOpen)}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white text-left"
+              disabled={isLoading}
+            >
+              <span className="block truncate">
+                {filters.set
+                  ? sets?.find(s => s.code === filters.set)?.name + ` (${filters.set})` || filters.set
+                  : 'All Sets'
+                }
+              </span>
+              <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </span>
+            </button>
+
+            {isSetDropdownOpen && (
+              <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
+                {/* Search input */}
+                <div className="p-2 border-b border-gray-200">
+                  <input
+                    type="text"
+                    value={setSearchQuery}
+                    onChange={(e) => setSetSearchQuery(e.target.value)}
+                    placeholder="Search sets..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                </div>
+
+                {/* Clear option */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSetChange({ target: { value: '' } } as React.ChangeEvent<HTMLSelectElement>);
+                    setIsSetDropdownOpen(false);
+                    setSetSearchQuery('');
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-900 hover:bg-gray-100"
+                >
+                  All Sets
+                </button>
+
+                {/* Set options */}
+                {filteredSets.map(set => (
+                  <button
+                    key={set.code}
+                    type="button"
+                    onClick={() => {
+                      handleSetChange({ target: { value: set.code } } as React.ChangeEvent<HTMLSelectElement>);
+                      setIsSetDropdownOpen(false);
+                      setSetSearchQuery('');
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-900 hover:bg-gray-100"
+                  >
+                    {set.name} ({set.code})
+                  </button>
+                ))}
+
+                {filteredSets.length === 0 && setSearchQuery && (
+                  <div className="px-3 py-2 text-sm text-gray-500">
+                    No sets found
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Type filter */}

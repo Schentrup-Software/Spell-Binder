@@ -60,6 +60,7 @@ export const COLLECTIONS = {
   COLLECTIONS: 'collections',
   SYNC_STATUS: 'sync_status',
   CARD_SETS: 'card_sets',
+  ALL_CARD_SETS: 'all_card_sets',
   CARD_COLLECTION: 'card_collection',
   USERS: 'users'
 } as const
