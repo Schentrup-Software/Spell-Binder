@@ -121,39 +121,6 @@ export function getErrorMessage(error: AppError, context?: string): string {
   }
 }
 
-// Retry utility with exponential backoff
-export async function withRetry<T>(
-  operation: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelay: number = 1000
-): Promise<T> {
-  let lastAppError: AppError | null = null
-  
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await operation()
-    } catch (error: any) {
-      if (error?.retryable === undefined) {
-        throw error // If error does not have retryable property, rethrow it
-      }
-
-      lastAppError = error
-      
-      // Don't retry if error is not retryable or we've reached max retries
-      if (!error.retryable || attempt === maxRetries) {
-        throw error
-      }
-      
-      // Wait before retrying with exponential backoff
-      const delay = baseDelay * Math.pow(2, attempt)
-      await new Promise(resolve => setTimeout(resolve, delay))
-    }
-  }
-  
-  // This should never be reached, but just in case
-  throw lastAppError || createAppError(new Error('Max retries exceeded'))
-}
-
 // Debounced error handler for form validation
 export function createDebouncedErrorHandler(
   callback: (error: AppError) => void,

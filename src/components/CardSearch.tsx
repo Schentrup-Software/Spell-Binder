@@ -79,7 +79,7 @@ export default function CardSearch() {
         handleError(err, 'Failed to load more results')
       }
     }
-  }, [debouncedSearchQuery, filters, withLoading, handleError])
+  }, [debouncedSearchQuery, filters])
 
   // Perform search when debounced query or filters change
   useEffect(() => {

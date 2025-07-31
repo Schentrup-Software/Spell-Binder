@@ -1,5 +1,5 @@
 import { Card, CardFilters, CollectionEntry, CardCondition } from './types';
-import { createAppError, withRetry, logError } from './errorHandling';
+import { createAppError, logError } from './errorHandling';
 import { COLLECTIONS } from './pocketbase';
 import pb from './pocketbase';
 import { RecordModel } from 'pocketbase';
@@ -17,47 +17,45 @@ export async function searchCards(
   pageSize: number = 20,
   page: number = 1
 ): Promise<Card[]> {
-  return withRetry(async () => {
-    try {
-      // Build filter string
-      let filterString = `searchText=${encodeURIComponent(query.trim())}`;
-      
-      // Add set filter if provided
-      if (filters.set) {
-        filterString += `&setCode=${filters.set}`;
-      }
-      
-      // Add type filter if provided
-      if (filters.type) {
-        filterString += `&typeLine=${filters.type}`;
-      }
-      
-      // Add rarity filter if provided
-      if (filters.rarity) {
-        filterString += `&rarity=${filters.rarity}`;
-      }
-      
-      // Add color filter if provided
-      if (filters.color && filters.color.length > 0) {
-        filterString += `&colors=${filters.color.join(",")}`;
-      }
-      
-      // Execute the search
-      const result = await fetch(`${pb.baseUrl}/api/cards?${filterString}&pageSize=${pageSize}&page=${page}`);
-      
-      if (!result.ok) {
-        throw new Error(`Failed to fetch cards: ${result.statusText}`);
-      }
-
-      const data = await result.json();
-
-      return data.items.map((item: RecordModel) => createCardFromRecord(item));
-    } catch (error) {
-      const appError = createAppError(error, 'Card search');
-      logError(appError, 'searchCards');
-      throw appError;
+  try {
+    // Build filter string
+    let filterString = `searchText=${encodeURIComponent(query.trim())}`;
+    
+    // Add set filter if provided
+    if (filters.set) {
+      filterString += `&setCode=${filters.set}`;
     }
-  });
+    
+    // Add type filter if provided
+    if (filters.type) {
+      filterString += `&typeLine=${filters.type}`;
+    }
+    
+    // Add rarity filter if provided
+    if (filters.rarity) {
+      filterString += `&rarity=${filters.rarity}`;
+    }
+    
+    // Add color filter if provided
+    if (filters.color && filters.color.length > 0) {
+      filterString += `&colors=${filters.color.join(",")}`;
+    }
+    
+    // Execute the search
+    const result = await fetch(`${pb.baseUrl}/api/cards?${filterString}&pageSize=${pageSize}&page=${page}`);
+    
+    if (!result.ok) {
+      throw new Error(`Failed to fetch cards: ${result.statusText}`);
+    }
+
+    const data = await result.json();
+
+    return data.items.map((item: RecordModel) => createCardFromRecord(item));
+  } catch (error) {
+    const appError = createAppError(error, 'Card search');
+    logError(appError, 'searchCards');
+    throw appError;
+  }
 }
 
 /**
@@ -66,16 +64,14 @@ export async function searchCards(
  * @returns Promise with card details
  */
 export async function getCardById(id: string): Promise<Card> {
-  return withRetry(async () => {
-    try {
-      const card = await pb.collection(COLLECTIONS.CARDS).getOne(id);
-      return card as unknown as Card;
-    } catch (error) {
-      const appError = createAppError(error, 'Get card details');
-      logError(appError, 'getCardById');
-      throw appError;
-    }
-  });
+  try {
+    const card = await pb.collection(COLLECTIONS.CARDS).getOne(id);
+    return card as unknown as Card;
+  } catch (error) {
+    const appError = createAppError(error, 'Get card details');
+    logError(appError, 'getCardById');
+    throw appError;
+  }
 }
 
 /**
@@ -118,26 +114,24 @@ export async function addCardToCollection(
   foil: boolean,
   notes?: string
 ): Promise<CollectionEntry> {
-  return withRetry(async () => {
-    try {
-      const data = {
-        user: pb.authStore.model?.id,
-        card: cardId,
-        quantity,
-        condition,
-        foil,
-        notes: notes || "",
-        acquired_date: new Date().toISOString(),
-      };
-      
-      const record = await pb.collection(COLLECTIONS.COLLECTIONS).create(data);
-      return record as unknown as CollectionEntry;
-    } catch (error) {
-      const appError = createAppError(error, 'Add card to collection');
-      logError(appError, 'addCardToCollection');
-      throw appError;
-    }
-  });
+  try {
+    const data = {
+      user: pb.authStore.model?.id,
+      card: cardId,
+      quantity,
+      condition,
+      foil,
+      notes: notes || "",
+      acquired_date: new Date().toISOString(),
+    };
+    
+    const record = await pb.collection(COLLECTIONS.COLLECTIONS).create(data);
+    return record as unknown as CollectionEntry;
+  } catch (error) {
+    const appError = createAppError(error, 'Add card to collection');
+    logError(appError, 'addCardToCollection');
+    throw appError;
+  }
 }
 
 /**
@@ -153,74 +147,77 @@ export async function getUserCollection(
   limit?: number,
   page?: number
 ): Promise<Card[]> {
-  return withRetry(async () => {
-    try {      
-      // Start with base filter
-      let filterString = "";
-      
-      // Add search query if provided
-      if (filters.searchQuery && filters.searchQuery.trim()) {
-        filterString += `name ~ "${filters.searchQuery.trim()}" || oracle_text ~ "${filters.searchQuery.trim()}"`;
-      }
-
-      if (filters) {
-        // Filter by set
-        if (filters.set) {
-          filterString += (filterString ? ' && ' : '') + `set_code = "${filters.set.toLocaleLowerCase()}"`;
-        }
-        
-        // Filter by type
-        if (filters.type) {
-          filterString += (filterString ? ' && ' : '') + `type_line ~ "${filters.type}"`;
-        }
-        
-        // Filter by rarity
-        if (filters.rarity) {
-          filterString += (filterString ? ' && ' : '') + `rarity = "${filters.rarity}"`;
-        }
-        
-        // Filter by color
-        if (filters.color && filters.color.length > 0) {
-          const colorFilters = filters.color.map(color => `colors ?~ "${color}"`);
-          filterString += (filterString ? ' && ' : '') + `(${colorFilters.join(' || ')})`;
-        }
-      }
-      
-      // Build sort string
-      let sortString = '';
-      
-      // Handle special sort cases that need to use expanded card fields
-      if (filters.sort === 'name') {
-        sortString = 'name';
-      } else if (filters.sort === 'set') {
-        sortString = 'set_name';
-      } else if (filters.sort === 'rarity') {
-        sortString = 'rarity';
-      } else if (filters.sort === 'price') {
-        sortString = 'price_usd';
-      }
-
-      // Add sort direction
-      sortString = sortString ? `${filters.sortDirection === 'asc' ? '+' : '-'}${sortString}` : '';
-
-      const result = await pb.collection(COLLECTIONS.CARD_COLLECTION).getList(page, limit, {
-        filter: filterString,
-        sort: sortString,
-        extends: 'card_prices_via_card',
-      });
-      
-      return result.items.map(item => createCardFromRecord(item));
-    } catch (error) {
-      const appError = createAppError(error, 'Load collection');
-      logError(appError, 'getUserCollection');
-      throw appError;
+  try {      
+    // Start with base filter
+    let filterString = "";
+    
+    // Add search query if provided
+    if (filters.searchQuery && filters.searchQuery.trim()) {
+      filterString += `name ~ "${filters.searchQuery.trim()}" || oracle_text ~ "${filters.searchQuery.trim()}"`;
     }
-  });
+
+    if (filters) {
+      // Filter by set
+      if (filters.set) {
+        filterString += (filterString ? ' && ' : '') + `set_code = "${filters.set.toLocaleLowerCase()}"`;
+      }
+      
+      // Filter by type
+      if (filters.type) {
+        filterString += (filterString ? ' && ' : '') + `type_line ~ "${filters.type}"`;
+      }
+      
+      // Filter by rarity
+      if (filters.rarity) {
+        filterString += (filterString ? ' && ' : '') + `rarity = "${filters.rarity}"`;
+      }
+      
+      // Filter by color
+      if (filters.color && filters.color.length > 0) {
+        const colorFilters = filters.color.map(color => `colors ?~ "${color}"`);
+        filterString += (filterString ? ' && ' : '') + `(${colorFilters.join(' || ')})`;
+      }
+    }
+    
+    // Build sort string
+    let sortString = '';
+    
+    // Handle special sort cases that need to use expanded card fields
+    if (filters.sort === 'name') {
+      sortString = 'name';
+    } else if (filters.sort === 'set') {
+      sortString = 'set_name';
+    } else if (filters.sort === 'rarity') {
+      sortString = 'rarity';
+    } else if (filters.sort === 'price') {
+      sortString = 'price_usd';
+    }
+
+    // Add sort direction
+    sortString = sortString ? `${filters.sortDirection === 'asc' ? '+' : '-'}${sortString}` : '';
+
+    const result = await pb.collection(COLLECTIONS.CARD_COLLECTION).getList(page, limit, {
+      filter: filterString,
+      sort: sortString,
+      extends: 'card_prices_via_card',
+    });
+    
+    return result.items.map(item => createCardFromRecord(item));
+  } catch (error) {
+    const appError = createAppError(error, 'Load collection');
+    logError(appError, 'getUserCollection');
+    throw appError;
+  }
 }
 
 function createCardFromRecord(item: RecordModel): Card {
-  const price_usd = item.price_usd != undefined
-    ? item.price_usd : (item.card_prices_via_card[0]?.price_usd ?? 0);
+  let price_usd = 0;
+
+  if (item.price_usd || item.price_usd === 0) {
+    price_usd = item.price_usd;
+  } else if (item.card_prices_via_card && item.card_prices_via_card.length > 0) {
+    price_usd = item.card_prices_via_card[0]?.price_usd || 0;
+  }
 
   return {
     id: item.id,
@@ -271,23 +268,21 @@ export async function updateCollectionEntry(
   foil: boolean,
   notes?: string
 ): Promise<CollectionEntry> {
-  return withRetry(async () => {
-    try {
-      const data = {
-        quantity,
-        condition,
-        foil,
-        notes: notes || "",
-      };
+  try {
+    const data = {
+      quantity,
+      condition,
+      foil,
+      notes: notes || "",
+    };
 
-      const record = await pb.collection(COLLECTIONS.COLLECTIONS).update(entryId, data);
-      return record as unknown as CollectionEntry;
-    } catch (error) {
-      const appError = createAppError(error, 'Update collection entry');
-      logError(appError, 'updateCollectionEntry');
-      throw appError;
-    }
-  });
+    const record = await pb.collection(COLLECTIONS.COLLECTIONS).update(entryId, data);
+    return record as unknown as CollectionEntry;
+  } catch (error) {
+    const appError = createAppError(error, 'Update collection entry');
+    logError(appError, 'updateCollectionEntry');
+    throw appError;
+  }
 }
 
 /**
@@ -296,13 +291,11 @@ export async function updateCollectionEntry(
  * @returns Promise that resolves when the card is removed
  */
 export async function removeFromCollection(entryId: string): Promise<void> {
-  return withRetry(async () => {
-    try {
-      await pb.collection(COLLECTIONS.COLLECTIONS).delete(entryId);
-    } catch (error) {
-      const appError = createAppError(error, 'Remove card from collection');
-      logError(appError, 'removeFromCollection');
-      throw appError;
-    }
-  });
+  try {
+    await pb.collection(COLLECTIONS.COLLECTIONS).delete(entryId);
+  } catch (error) {
+    const appError = createAppError(error, 'Remove card from collection');
+    logError(appError, 'removeFromCollection');
+    throw appError;
+  }
 }

@@ -44,11 +44,9 @@ routerAdd("GET", "/api/cards", (e) => {
                 ) AS image_uri,
                 COALESCE(JSON_EXTRACT(c.image_uris, '$.small'), '') AS image_uri_small,
                 c.image_file,
-                cp.price_usd,
                 c.last_updated
             FROM search_text_fts s
             JOIN cards c ON c.scryfall_id = s.card_id
-            LEFT JOIN card_prices cp ON cp.card_id = c.id 
             WHERE 
                 search_text_fts MATCH {:searchText}
                 AND ({:setCode} IS NULL OR c.set_code = {:setCode})
@@ -101,12 +99,23 @@ routerAdd("GET", "/api/cards", (e) => {
         "image_uri": "",
         "image_uri_small": "",
         "image_file": "",
-        "price_usd": -0,
         "last_updated": ""
     }))
     cards.all(result)
 
+    // Add prices
+    const prices = $app.findAllRecords(
+        "card_prices",
+        $dbx.in("card_id", ...result.map(c => c.id))
+    );
+
     return e.json(200, {
-        items: result,
-    });
+        items: result.map(card => {
+            const price = prices.find(p => p.get('card_id') === card.id) || {};
+            return {
+                ...card,
+                price_usd: price.get('price_usd') || null
+            };
+        })
+    })
 });
