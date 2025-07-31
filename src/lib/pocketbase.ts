@@ -45,6 +45,27 @@ export interface SyncStatus {
   error_message?: string
 }
 
+export interface Deck {
+  id: string
+  user: string
+  name: string
+  description?: string
+  format?: DeckFormat
+  created: string
+  updated: string
+}
+
+export interface DeckCard {
+  id: string
+  deck: string
+  card: string
+  collection?: string
+  type: DeckCardType
+  quantity: number
+  created: string
+  updated: string
+}
+
 export enum CardCondition {
   MINT = 'Mint',
   NEAR_MINT = 'Near Mint',
@@ -54,6 +75,31 @@ export enum CardCondition {
   DAMAGED = 'Damaged'
 }
 
+export type DeckFormat = 
+  | 'alchemy'
+  | 'brawl'
+  | 'commander'
+  | 'duel'
+  | 'future'
+  | 'gladiator'
+  | 'historic'
+  | 'legacy'
+  | 'modern'
+  | 'oathbreaker'
+  | 'oldschool'
+  | 'pauper'
+  | 'paupercommander'
+  | 'penny'
+  | 'pioneer'
+  | 'predh'
+  | 'premodern'
+  | 'standard'
+  | 'standardbrawl'
+  | 'timeless'
+  | 'vintage'
+
+export type DeckCardType = 'library' | 'commander' | 'co-commander'
+
 // Collection names
 export const COLLECTIONS = {
   CARDS: 'cards',
@@ -62,5 +108,7 @@ export const COLLECTIONS = {
   CARD_SETS: 'card_sets',
   ALL_CARD_SETS: 'all_card_sets',
   CARD_COLLECTION: 'card_collection',
-  USERS: 'users'
+  USERS: 'users',
+  DECKS: 'decks',
+  DECK_CARDS: 'deck_cards'
 } as const

@@ -1,4 +1,4 @@
-import { Card, CardFilters, CollectionEntry, CardCondition } from './types';
+import { Card, CardFilters, CollectionEntry, CardCondition, Deck, DeckCard, DeckFormat, DeckCardType } from './types';
 import { createAppError, logError } from './errorHandling';
 import { COLLECTIONS } from './pocketbase';
 import pb from './pocketbase';
@@ -82,7 +82,7 @@ export async function getCardSets(isCollectionView: boolean): Promise<{code: str
   try {
     const collectionName = isCollectionView ? COLLECTIONS.CARD_SETS : COLLECTIONS.ALL_CARD_SETS;
     const result = await pb.collection(collectionName).getList(1, 500, {
-      sort: 'set_name'
+      sort: isCollectionView ? 'name' : 'set_name'
     });
 
     // Extract unique sets
@@ -296,6 +296,192 @@ export async function removeFromCollection(entryId: string): Promise<void> {
   } catch (error) {
     const appError = createAppError(error, 'Remove card from collection');
     logError(appError, 'removeFromCollection');
+    throw appError;
+  }
+}
+
+/**
+ * Get all decks for the authenticated user
+ * @returns Promise with array of decks
+ */
+export async function getUserDecks(): Promise<Deck[]> {
+  try {
+    const result = await pb.collection(COLLECTIONS.DECKS).getList(1, 50, {
+      sort: '-updated',
+      filter: `user.id = "${pb.authStore.model?.id}"`
+    });
+    
+    return result.items as unknown as Deck[];
+  } catch (error) {
+    const appError = createAppError(error, 'Get user decks');
+    logError(appError, 'getUserDecks');
+    throw appError;
+  }
+}
+
+/**
+ * Create a new deck
+ * @param name Deck name
+ * @param description Optional deck description
+ * @param format Optional deck format
+ * @returns Promise with the created deck
+ */
+export async function createDeck(
+  name: string,
+  description?: string,
+  format?: DeckFormat
+): Promise<Deck> {
+  try {
+    const data = {
+      user: pb.authStore.model?.id,
+      name,
+      description: description || "",
+      format: format || undefined
+    };
+    
+    const record = await pb.collection(COLLECTIONS.DECKS).create(data);
+    return record as unknown as Deck;
+  } catch (error) {
+    const appError = createAppError(error, 'Create deck');
+    logError(appError, 'createDeck');
+    throw appError;
+  }
+}
+
+/**
+ * Update a deck
+ * @param deckId Deck ID
+ * @param name New deck name
+ * @param description New deck description
+ * @param format New deck format
+ * @returns Promise with the updated deck
+ */
+export async function updateDeck(
+  deckId: string,
+  name: string,
+  description?: string,
+  format?: DeckFormat
+): Promise<Deck> {
+  try {
+    const data = {
+      name,
+      description: description || "",
+      format: format || undefined
+    };
+    
+    const record = await pb.collection(COLLECTIONS.DECKS).update(deckId, data);
+    return record as unknown as Deck;
+  } catch (error) {
+    const appError = createAppError(error, 'Update deck');
+    logError(appError, 'updateDeck');
+    throw appError;
+  }
+}
+
+/**
+ * Delete a deck
+ * @param deckId Deck ID to delete
+ * @returns Promise that resolves when the deck is deleted
+ */
+export async function deleteDeck(deckId: string): Promise<void> {
+  try {
+    await pb.collection(COLLECTIONS.DECKS).delete(deckId);
+  } catch (error) {
+    const appError = createAppError(error, 'Delete deck');
+    logError(appError, 'deleteDeck');
+    throw appError;
+  }
+}
+
+/**
+ * Get all cards in a deck
+ * @param deckId Deck ID
+ * @returns Promise with array of deck cards with expanded card details
+ */
+export async function getDeckCards(deckId: string): Promise<DeckCard[]> {
+  try {
+    const result = await pb.collection(COLLECTIONS.DECK_CARDS).getList(1, 500, {
+      sort: 'type,created',
+      filter: `deck.id = "${deckId}"`,
+      expand: 'card,collection'
+    });
+    
+    return result.items as unknown as DeckCard[];
+  } catch (error) {
+    const appError = createAppError(error, 'Get deck cards');
+    logError(appError, 'getDeckCards');
+    throw appError;
+  }
+}
+
+/**
+ * Add a card to a deck
+ * @param deckId Deck ID
+ * @param cardId Card ID
+ * @param quantity Number of copies
+ * @param type Type of card (library, commander, etc.)
+ * @param collectionId Optional collection entry ID
+ * @returns Promise with the created deck card entry
+ */
+export async function addCardToDeck(
+  deckId: string,
+  cardId: string,
+  quantity: number,
+  type: DeckCardType = 'library',
+  collectionId?: string
+): Promise<DeckCard> {
+  try {
+    const data = {
+      deck: deckId,
+      card: cardId,
+      quantity,
+      type,
+      collection: collectionId || undefined
+    };
+    
+    const record = await pb.collection(COLLECTIONS.DECK_CARDS).create(data);
+    return record as unknown as DeckCard;
+  } catch (error) {
+    const appError = createAppError(error, 'Add card to deck');
+    logError(appError, 'addCardToDeck');
+    throw appError;
+  }
+}
+
+/**
+ * Update a deck card
+ * @param deckCardId Deck card ID
+ * @param quantity New quantity
+ * @param type New card type
+ * @returns Promise with the updated deck card
+ */
+export async function updateDeckCard(
+  deckCardId: string,
+  quantity: number,
+  type: DeckCardType
+): Promise<DeckCard> {
+  try {
+    const data = { quantity, type };
+    const record = await pb.collection(COLLECTIONS.DECK_CARDS).update(deckCardId, data);
+    return record as unknown as DeckCard;
+  } catch (error) {
+    const appError = createAppError(error, 'Update deck card');
+    logError(appError, 'updateDeckCard');
+    throw appError;
+  }
+}
+
+/**
+ * Remove a card from a deck
+ * @param deckCardId Deck card entry ID to remove
+ * @returns Promise that resolves when the card is removed
+ */
+export async function removeCardFromDeck(deckCardId: string): Promise<void> {
+  try {
+    await pb.collection(COLLECTIONS.DECK_CARDS).delete(deckCardId);
+  } catch (error) {
+    const appError = createAppError(error, 'Remove card from deck');
+    logError(appError, 'removeCardFromDeck');
     throw appError;
   }
 }

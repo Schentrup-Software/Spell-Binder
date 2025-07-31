@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Dashboard from './components/Dashboard'
 import CollectionView from './components/CollectionView'
 import CardSearch from './components/CardSearch'
+import DeckView from './components/DeckView'
+import DeckDetail from './components/DeckDetail'
 import NotFound from './components/NotFound'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -57,6 +59,8 @@ function AuthenticatedApp() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/collection" element={<CollectionView />} />
+          <Route path="/decks" element={<DeckView />} />
+          <Route path="/decks/:deckId" element={<DeckDetail />} />
           <Route path="/search" element={<CardSearch />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

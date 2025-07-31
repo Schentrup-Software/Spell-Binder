@@ -64,3 +64,65 @@ export interface CardFilters {
  */
 export type SortField = 'name' | 'set' | 'rarity' | 'price' | 'acquired_date' | 'quantity';
 export type SortDirection = 'asc' | 'desc';
+
+/**
+ * Interface for a deck
+ */
+export interface Deck {
+  id: string;
+  user: string;
+  name: string;
+  description?: string;
+  format?: DeckFormat;
+  created: string;
+  updated: string;
+}
+
+/**
+ * Interface for a card in a deck
+ */
+export interface DeckCard {
+  id: string;
+  deck: string;
+  card: string;
+  collection?: string;
+  type: DeckCardType;
+  quantity: number;
+  created: string;
+  updated: string;
+  expand?: {
+    card: Card;
+    collection?: CollectionEntry;
+  };
+}
+
+/**
+ * Available deck formats
+ */
+export type DeckFormat = 
+  | 'alchemy'
+  | 'brawl'
+  | 'commander'
+  | 'duel'
+  | 'future'
+  | 'gladiator'
+  | 'historic'
+  | 'legacy'
+  | 'modern'
+  | 'oathbreaker'
+  | 'oldschool'
+  | 'pauper'
+  | 'paupercommander'
+  | 'penny'
+  | 'pioneer'
+  | 'predh'
+  | 'premodern'
+  | 'standard'
+  | 'standardbrawl'
+  | 'timeless'
+  | 'vintage';
+
+/**
+ * Types of cards in a deck
+ */
+export type DeckCardType = 'library' | 'commander' | 'co-commander';
