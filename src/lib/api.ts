@@ -206,24 +206,10 @@ export async function getUserCollection(
       const result = await pb.collection(COLLECTIONS.CARD_COLLECTION).getList(page, limit, {
         filter: filterString,
         sort: sortString,
+        extends: 'card_prices_via_card',
       });
       
-      // Map the expanded card_id to the card property
-      let entries = result.items
-        .map(item => {
-          const card = createCardFromRecord(item as RecordModel, {
-              id: item.collection_id,
-              quantity: item.collection_quantity,
-              condition: item.collection_condition,
-              foil: item.collection_foil,
-              acquired_date: item.collection_acquired_date,
-              notes: item.collection_notes || "",
-            } as CollectionEntry);
-
-          return card as Card;
-        });
-      
-      return entries;
+      return result.items.map(item => createCardFromRecord(item));
     } catch (error) {
       const appError = createAppError(error, 'Load collection');
       logError(appError, 'getUserCollection');
@@ -232,7 +218,10 @@ export async function getUserCollection(
   });
 }
 
-function createCardFromRecord(item: RecordModel, collectionEntry?: CollectionEntry): Card {
+function createCardFromRecord(item: RecordModel): Card {
+  const price_usd = item.price_usd != undefined
+    ? item.price_usd : (item.card_prices_via_card[0]?.price_usd ?? 0);
+
   return {
     id: item.id,
     scryfall_id: item.scryfall_id,
@@ -253,9 +242,16 @@ function createCardFromRecord(item: RecordModel, collectionEntry?: CollectionEnt
       ?? item.image_uris?.small,
     image_uri_small: item.image_uris?.small,
     image_file: item.image_file,
-    price_usd: item.price_usd,
+    price_usd: price_usd,
     last_updated: item.last_updated,
-    collection: collectionEntry
+    collection: item.collection_id ? {
+      id: item.collection_id,
+      quantity: item.collection_quantity,
+      condition: item.collection_condition,
+      foil: item.collection_foil,
+      acquired_date: item.collection_acquired_date,
+      notes: item.collection_notes || "",
+    } as CollectionEntry : undefined
   };
 }
 

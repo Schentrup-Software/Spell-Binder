@@ -83,6 +83,7 @@ function processBatch(cards, batchNumber, totalBatches) {
     let errorCount = 0
 
     let batchOfSearchableCards = []
+    let batchOfPrices = []
     let existingRecords = arrayOf(new Record);
     $app.recordQuery("cards")
         .where($dbx.in("scryfall_id", ...cards.map(card => card.id)))
@@ -105,6 +106,12 @@ function processBatch(cards, batchNumber, totalBatches) {
             if (!cardRecord) {
                 cardRecord = new Record(cardsCollection)
                 cardRecord.set("scryfall_id", cardData.id)
+            } else {
+                batchOfPrices.push({
+                    card_id: cardRecord.id,
+                    prices: cardData.prices || {},
+                });
+                continue;
             }
 
             // Basic card information
@@ -186,35 +193,6 @@ function processBatch(cards, batchNumber, totalBatches) {
                 cardRecord.set("penny_rank", cardData.penny_rank)
             }
 
-            // Price information
-            cardRecord.set("prices", cardData.prices || {})
-            if (cardData.prices) {
-                if (cardData.prices.usd) {
-                    const price = parseFloat(cardData.prices.usd)
-                    if (!isNaN(price)) {
-                        cardRecord.set("price_usd", price)
-                    }
-                }
-                if (cardData.prices.usd_foil) {
-                    const price = parseFloat(cardData.prices.usd_foil)
-                    if (!isNaN(price)) {
-                        cardRecord.set("price_usd_foil", price)
-                    }
-                }
-                if (cardData.prices.eur) {
-                    const price = parseFloat(cardData.prices.eur)
-                    if (!isNaN(price)) {
-                        cardRecord.set("price_eur", price)
-                    }
-                }
-                if (cardData.prices.tix) {
-                    const price = parseFloat(cardData.prices.tix)
-                    if (!isNaN(price)) {
-                        cardRecord.set("price_tix", price)
-                    }
-                }
-            }
-
             // URIs and external links
             cardRecord.set("related_uris", cardData.related_uris || {})
             cardRecord.set("purchase_uris", cardData.purchase_uris || {})
@@ -275,6 +253,7 @@ function processBatch(cards, batchNumber, totalBatches) {
     }
 
     insertSearchData(batchOfSearchableCards, batchNumber, totalBatches)
+    batchProcessPrices(batchOfPrices, batchNumber, totalBatches)
 
     return processedCount
 }
@@ -346,6 +325,57 @@ function insertSearchData(batchOfSearchableCards, batchNumber, totalBatches) {
     } else {
         const timeToRun = (endTime - startTime) / 1000 // Convert to seconds
         console.log(`Inserted ${result.rowsAffected()} search texts in batch ${batchNumber}/${totalBatches} in ${timeToRun} seconds`)
+    }
+}
+
+// Batch process card prices - delete old prices and insert new ones
+function batchProcessPrices(priceData, batchNumber, totalBatches) {
+    const startTime = new Date()
+
+    if (priceData.length === 0) {
+        console.log(`No price data to process for batch ${batchNumber}/${totalBatches}`)
+        return
+    }
+
+    try {
+        // First, delete existing prices for these cards
+        const deleteResult = $app.db()
+            .newQuery("DELETE FROM card_prices WHERE card_id IN (" + priceData.map((_, index) => `{:card_id_${index}}`).join(", ") + ")")
+            .bind(priceData.reduce((acc, price, index) => {
+                acc[`card_id_${index}`] = price.card_id
+                return acc
+            }, {}))
+            .execute()
+
+        // Then, insert new price data
+        const values = []
+        const bindings = {}
+        const currentTime = new DateTime()
+
+        priceData.forEach((priceDatum, index) => {
+            values.push(`({:card_id_${index}}, {:price_usd_${index}}, {:price_usd_foil_${index}}, {:price_eur_${index}}, {:price_tix_${index}}, {:last_updated_${index}})`)
+
+            bindings[`card_id_${index}`] = priceDatum.card_id
+            bindings[`price_usd_${index}`] = priceDatum.prices.usd || 0
+            bindings[`price_usd_foil_${index}`] = priceDatum.prices.usd_foil || 0
+            bindings[`price_eur_${index}`] = priceDatum.prices.eur || 0
+            bindings[`price_tix_${index}`] = priceDatum.prices.tix || 0
+            bindings[`last_updated_${index}`] = currentTime
+        })
+
+        const insertQuery = "INSERT INTO card_prices (card_id, price_usd, price_usd_foil, price_eur, price_tix, last_updated) VALUES " + values.join(", ")
+
+        const insertResult = $app.db()
+            .newQuery(insertQuery)
+            .bind(bindings)
+            .execute()
+
+        const endTime = new Date()
+        const timeToRun = (endTime - startTime) / 1000
+
+        console.log(`Batch inserted ${insertResult.rowsAffected()} price records for batch ${batchNumber}/${totalBatches} in ${timeToRun} seconds`)
+    } catch (error) {
+        console.error(`Error in batch price processing for batch ${batchNumber}/${totalBatches}: ${error.message}`)
     }
 }
 

@@ -110,7 +110,7 @@ export function PocketBaseProvider({ children }: PocketBaseProviderProps) {
     initialCheckConnection()
 
     // Set up periodic health checks (without loading state)
-    const interval = setInterval(checkConnection, 30000) // Check every 30 seconds
+    const interval = setInterval(checkConnection, 60000) // Check every 60 seconds
 
     return () => {
       clearInterval(interval)

@@ -44,10 +44,11 @@ routerAdd("GET", "/api/cards", (e) => {
                 ) AS image_uri,
                 COALESCE(JSON_EXTRACT(c.image_uris, '$.small'), '') AS image_uri_small,
                 c.image_file,
-                c.price_usd,
+                cp.price_usd,
                 c.last_updated
             FROM search_text_fts s
             JOIN cards c ON c.scryfall_id = s.card_id
+            LEFT JOIN card_prices cp ON cp.card_id = c.id 
             WHERE 
                 search_text_fts MATCH {:searchText}
                 AND ({:setCode} IS NULL OR c.set_code = {:setCode})
