@@ -405,8 +405,14 @@ export async function getDeckCards(deckId: string): Promise<DeckCard[]> {
       filter: `deck.id = "${deckId}"`,
       expand: 'card,collection'
     });
-    
-    return result.items as unknown as DeckCard[];
+
+    return result.items.map(item => ({
+      ...item,
+      expand: {
+        card: createCardFromRecord(item.expand?.card),
+        collection: item.expand?.collection
+      }
+    })) as unknown as DeckCard[];
   } catch (error) {
     const appError = createAppError(error, 'Get deck cards');
     logError(appError, 'getDeckCards');

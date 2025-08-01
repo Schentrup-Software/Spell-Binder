@@ -21,8 +21,6 @@ import { Deck, DeckCard, DeckCardType, Card } from '../lib/types'
 
 interface DeckStats {
     totalCards: number
-    commanderCards: number
-    libraryCards: number
     averageCmc: number
     totalValue: number
     colorDistribution: Record<string, number>
@@ -42,6 +40,12 @@ export default function DeckDetail() {
     const [searchQuery, setSearchQuery] = useState('')
     const [searchInCollection, setSearchInCollection] = useState(true)
     const [isSearchingAllCards, setIsSearchingAllCards] = useState(false)
+    const [stats, setStats] = useState<DeckStats>({
+        totalCards: 0,
+        averageCmc: 0,
+        totalValue: 0,
+        colorDistribution: {}
+    })
 
     // Form state for adding/editing cards
     const [selectedCard, setSelectedCard] = useState<Card | null>(null)
@@ -99,12 +103,10 @@ export default function DeckDetail() {
         })
     }
 
-    // Calculate deck statistics
-    const calculateStats = (): DeckStats => {
+    // Calculate deck statistics with use effect
+    useEffect(() => {
         const stats: DeckStats = {
             totalCards: 0,
-            commanderCards: 0,
-            libraryCards: 0,
             averageCmc: 0,
             totalValue: 0,
             colorDistribution: {}
@@ -112,48 +114,44 @@ export default function DeckDetail() {
 
         let totalCmc = 0
         let cardsWithCmc = 0
-
+        console.log('Calculating stats for deck cards:', deckCards)
         deckCards.forEach(deckCard => {
             const card = deckCard.expand?.card
+            console.log('Processing deck card:', deckCard)
             if (!card) return
 
-            stats.totalCards += deckCard.quantity
-
-            if (deckCard.type === 'commander' || deckCard.type === 'co-commander') {
-                stats.commanderCards += deckCard.quantity
-            } else {
-                stats.libraryCards += deckCard.quantity
-            }
+            stats.totalCards += 1
 
             // Calculate CMC
             if (card.mana_cost) {
                 // Simple CMC calculation - count mana symbols
                 const cmc = (card.mana_cost.match(/\{[^}]+\}/g) || []).length
-                totalCmc += cmc * deckCard.quantity
-                cardsWithCmc += deckCard.quantity
+                totalCmc += cmc
+                cardsWithCmc += 1
             }
 
             // Calculate total value
             if (card.price_usd) {
-                stats.totalValue += card.price_usd * deckCard.quantity
+                stats.totalValue += card.price_usd
             }
 
             // Color distribution
+            console.log('Card colors:', card.colors)
             if (card.colors && card.colors.length > 0) {
                 card.colors.forEach(color => {
-                    stats.colorDistribution[color] = (stats.colorDistribution[color] || 0) + deckCard.quantity
+                    stats.colorDistribution[color] = (stats.colorDistribution[color] || 0) + 1
                 })
             } else {
-                stats.colorDistribution['C'] = (stats.colorDistribution['C'] || 0) + deckCard.quantity
+                stats.colorDistribution['C'] = (stats.colorDistribution['C'] || 0) + 1
             }
         })
 
         stats.averageCmc = cardsWithCmc > 0 ? totalCmc / cardsWithCmc : 0
+        console.log('Deck stats:', stats)
 
-        return stats
-    }
 
-    const stats = calculateStats()
+        setStats(stats)
+    }, [deckCards])
 
     // Search all cards function
     const searchAllCards = useCallback(async (query: string) => {
@@ -326,12 +324,42 @@ export default function DeckDetail() {
                                 <div className="text-sm text-gray-500">Total Cards</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-purple-600">{stats.commanderCards}</div>
-                                <div className="text-sm text-gray-500">Commanders</div>
-                            </div>
-                            <div className="text-center">
                                 <div className="text-2xl font-bold text-green-600">{stats.averageCmc.toFixed(1)}</div>
                                 <div className="text-sm text-gray-500">Avg. CMC</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="flex flex-wrap justify-center gap-3 mb-2">
+                                    {Object.entries(stats.colorDistribution).map(([color, count]) => {
+                                        const colorClasses = {
+                                            'W': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                                            'U': 'bg-blue-100 text-blue-800 border-blue-200',
+                                            'B': 'bg-gray-800 text-white border-gray-600',
+                                            'R': 'bg-red-100 text-red-800 border-red-200',
+                                            'G': 'bg-green-100 text-green-800 border-green-200',
+                                            'C': 'bg-gray-100 text-gray-800 border-gray-200'
+                                        }
+                                        const manaSymbols = {
+                                            'W': (<i className="ms ms-w" />),
+                                            'U': (<i className="ms ms-u" />),
+                                            'B': (<i className="ms ms-b" />),
+                                            'R': (<i className="ms ms-r" />),
+                                            'G': (<i className="ms ms-g" />),
+                                            'C': (<i className="ms ms-c" />)
+                                        }
+                                        return (
+                                            <div key={color} className="flex items-center gap-1">
+                                                <div
+                                                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-lg ${colorClasses[color as keyof typeof colorClasses] || 'bg-gray-100 text-gray-800 border-gray-200'}`}
+                                                    title={`${color}: ${count} cards`}
+                                                >
+                                                    {manaSymbols[color as keyof typeof manaSymbols] || color}
+                                                </div>
+                                                <span className="text-sm font-medium text-gray-700">{count}</span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                                <div className="text-sm text-gray-500">Color Distribution</div>
                             </div>
                             <div className="text-center">
                                 <div className="text-2xl font-bold text-yellow-600">${stats.totalValue.toFixed(2)}</div>
