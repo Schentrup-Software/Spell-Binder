@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Modal from './Modal'
 import CardImage from './CardImage'
 import LoadingSpinner from './LoadingSpinner'
@@ -19,6 +19,9 @@ interface AddCardModalProps {
     setSearchInCollection: (value: boolean) => void
     isSearchingAllCards: boolean
     isLoadingCards: boolean
+    isLoadingCollectionCards: boolean
+    hasMoreCollectionCards: boolean
+    loadMoreCollectionCards: () => void
 }
 
 export default function AddCardModal({
@@ -34,11 +37,17 @@ export default function AddCardModal({
     searchInCollection,
     setSearchInCollection,
     isSearchingAllCards,
-    isLoadingCards
+    isLoadingCards,
+    isLoadingCollectionCards,
+    hasMoreCollectionCards,
+    loadMoreCollectionCards
 }: AddCardModalProps) {
     const [selectedCard, setSelectedCard] = useState<Card | null>(null)
     const [cardQuantity, setCardQuantity] = useState(1)
     const [cardType, setCardType] = useState<DeckCardType>('library')
+    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
+    const [showTooltip, setShowTooltip] = useState(false)
+    const buttonRef = useRef<HTMLButtonElement>(null)
 
     // Reset form when modal opens/closes
     useEffect(() => {
@@ -83,15 +92,73 @@ export default function AddCardModal({
         onAddCard(selectedCard, cardQuantity, cardType)
     }
 
-    // Filter available cards based on search and source
-    const filteredCards = searchInCollection
-        ? availableCards.filter(card =>
-            card.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        : allCards
+    // Use server-side filtered results directly
+    const filteredCards = searchInCollection ? availableCards : allCards
 
     const constraints = getDeckConstraints(deck?.format)
     const isSingleton = constraints.maxQuantityPerCard === 1
+
+    // Helper function to get tooltip message for disabled button
+    const getDisabledTooltip = (): string => {
+        if (!selectedCard) {
+            return "Please select a card first"
+        }
+
+        const maxQuantity = getMaxQuantityForCard(selectedCard.name, deckCards, deck?.format)
+        if (maxQuantity === 0) {
+            // Check if the card is already in the deck to provide more specific feedback
+            const existingCard = deckCards.find(dc => dc.expand?.card?.name === selectedCard.name)
+            if (existingCard) {
+                return `"${selectedCard.name}" is already at maximum quantity for this deck format`
+            }
+            return `"${selectedCard.name}" cannot be added - maximum quantity reached for this deck format`
+        }
+
+        if (cardType === 'commander' && !isCommanderSlotAvailable('commander', deckCards)) {
+            const currentCommander = deckCards.find(dc => dc.type === 'commander')?.expand?.card?.name
+            return currentCommander
+                ? `Commander slot is filled by "${currentCommander}"`
+                : "Commander slot is already filled"
+        }
+
+        if (cardType === 'co-commander' && !isCommanderSlotAvailable('co-commander', deckCards)) {
+            const currentCoCommander = deckCards.find(dc => dc.type === 'co-commander')?.expand?.card?.name
+            return currentCoCommander
+                ? `Co-Commander slot is filled by "${currentCoCommander}"`
+                : "Co-Commander slot is already filled"
+        }
+
+        return ""
+    }
+
+    const isButtonDisabled = !selectedCard ||
+        getMaxQuantityForCard(selectedCard?.name || '', deckCards, deck?.format) === 0 ||
+        (cardType === 'commander' && !isCommanderSlotAvailable('commander', deckCards)) ||
+        (cardType === 'co-commander' && !isCommanderSlotAvailable('co-commander', deckCards))
+
+    const tooltipMessage = isButtonDisabled ? getDisabledTooltip() : ""
+
+    // Calculate tooltip position based on button position
+    const updateTooltipPosition = () => {
+        if (buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect()
+            setTooltipPosition({
+                x: rect.right - 200, // Position from right edge, accounting for tooltip width
+                y: rect.bottom + 8   // Position below button with some margin
+            })
+        }
+    }
+
+    const handleMouseEnter = () => {
+        if (isButtonDisabled && tooltipMessage) {
+            updateTooltipPosition()
+            setShowTooltip(true)
+        }
+    }
+
+    const handleMouseLeave = () => {
+        setShowTooltip(false)
+    }
 
     return (
         <Modal
@@ -148,7 +215,7 @@ export default function AddCardModal({
                         Select Card
                     </label>
                     <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-md">
-                        {(isLoadingCards || isSearchingAllCards) ? (
+                        {(isLoadingCards || isSearchingAllCards || (searchInCollection && isLoadingCollectionCards)) ? (
                             <div className="p-4 text-center">
                                 <LoadingSpinner size="small" />
                                 <p className="mt-2 text-sm text-gray-500">
@@ -184,6 +251,19 @@ export default function AddCardModal({
                                         </div>
                                     </button>
                                 ))}
+
+                                {/* Load More Button for Collection */}
+                                {searchInCollection && hasMoreCollectionCards && (
+                                    <div className="p-3 text-center border-t">
+                                        <button
+                                            onClick={loadMoreCollectionCards}
+                                            disabled={isLoadingCollectionCards}
+                                            className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isLoadingCollectionCards ? 'Loading...' : 'Load More'}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="p-4 text-center text-gray-500">
@@ -285,19 +365,34 @@ export default function AddCardModal({
                 >
                     Cancel
                 </button>
-                <button
-                    onClick={handleAddCard}
-                    disabled={
-                        !selectedCard ||
-                        getMaxQuantityForCard(selectedCard?.name || '', deckCards, deck?.format) === 0 ||
-                        (cardType === 'commander' && !isCommanderSlotAvailable('commander', deckCards)) ||
-                        (cardType === 'co-commander' && !isCommanderSlotAvailable('co-commander', deckCards))
-                    }
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Add to Deck
-                </button>
+                <div className="relative group">
+                    <button
+                        ref={buttonRef}
+                        onClick={handleAddCard}
+                        disabled={isButtonDisabled}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={isButtonDisabled ? tooltipMessage : ""}
+                    >
+                        Add to Deck
+                    </button>
+                </div>
             </div>
+
+            {/* Fixed position tooltip that appears outside the modal */}
+            {showTooltip && isButtonDisabled && tooltipMessage && (
+                <div
+                    className="fixed px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg z-[9999] max-w-xs text-left whitespace-normal pointer-events-none"
+                    style={{
+                        left: `${tooltipPosition.x}px`,
+                        top: `${tooltipPosition.y}px`
+                    }}
+                >
+                    {tooltipMessage}
+                    <div className="absolute bottom-full right-4 border-4 border-transparent border-b-gray-900"></div>
+                </div>
+            )}
         </Modal>
     )
 }

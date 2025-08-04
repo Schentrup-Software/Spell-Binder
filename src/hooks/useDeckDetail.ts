@@ -23,6 +23,9 @@ export function useDeckDetail(deckId: string | undefined) {
     const [searchQuery, setSearchQuery] = useState('')
     const [searchInCollection, setSearchInCollection] = useState(true)
     const [isSearchingAllCards, setIsSearchingAllCards] = useState(false)
+    const [isLoadingCollectionCards, setIsLoadingCollectionCards] = useState(false)
+    const [collectionPage, setCollectionPage] = useState(1)
+    const [hasMoreCollectionCards, setHasMoreCollectionCards] = useState(true)
     const [stats, setStats] = useState<DeckStats>({
         totalCards: 0,
         averageCmc: 0,
@@ -30,19 +33,11 @@ export function useDeckDetail(deckId: string | undefined) {
         colorDistribution: {}
     })
 
-    // Debounced search query for all cards search
+    // Debounced search query for collection and all cards search
     const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
     const { handleError, handleSuccess } = useErrorHandler({ context: 'Deck' })
     const { isLoading, withLoading } = useLoadingState()
-
-    // Load deck and cards on component mount
-    useEffect(() => {
-        if (deckId) {
-            loadDeckData()
-            loadAvailableCards()
-        }
-    }, [deckId])
 
     const loadDeckData = useCallback(() => {
         if (!deckId) return
@@ -69,16 +64,72 @@ export function useDeckDetail(deckId: string | undefined) {
         })
     }, [deckId, withLoading, handleError])
 
-    const loadAvailableCards = useCallback(() => {
+    const loadAvailableCards = useCallback((query: string = '', page: number = 1, append: boolean = false) => {
+        setIsLoadingCollectionCards(true)
+        
         withLoading('cards', async () => {
             try {
-                const collection = await getUserCollection()
-                setAvailableCards(collection)
+                const filters = query.trim() ? { searchQuery: query } : {}
+                const pageSize = 30
+                const result = await getUserCollection(filters, pageSize, page)
+                
+                if (append) {
+                    setAvailableCards(prev => [...prev, ...result])
+                } else {
+                    setAvailableCards(result)
+                }
+                
+                // Check if there are more cards available
+                setHasMoreCollectionCards(result.length === pageSize)
+                
             } catch (error) {
                 handleError(error, 'Failed to load collection')
+            } finally {
+                setIsLoadingCollectionCards(false)
             }
         })
     }, [withLoading, handleError])
+
+    // Load more collection cards (for pagination)
+    const loadMoreCollectionCards = useCallback(() => {
+        if (hasMoreCollectionCards && !isLoadingCollectionCards) {
+            const nextPage = collectionPage + 1
+            setCollectionPage(nextPage)
+            loadAvailableCards(debouncedSearchQuery, nextPage, true)
+        }
+    }, [hasMoreCollectionCards, isLoadingCollectionCards, collectionPage, debouncedSearchQuery, loadAvailableCards])
+
+    // Load deck and cards on component mount
+    useEffect(() => {
+        if (deckId) {
+            loadDeckData()
+        }
+    }, [deckId, loadDeckData])
+
+    // Load initial collection when component mounts
+    useEffect(() => {
+        if (deckId) {
+            loadAvailableCards() // Load initial collection without search
+        }
+    }, [deckId, loadAvailableCards])
+
+    // Search collection when query changes and searching in collection
+    useEffect(() => {
+        if (searchInCollection && debouncedSearchQuery !== undefined) {
+            setCollectionPage(1)
+            loadAvailableCards(debouncedSearchQuery, 1, false)
+        }
+    }, [searchInCollection, debouncedSearchQuery, loadAvailableCards])
+
+    // Reset collection state when switching search modes
+    useEffect(() => {
+        if (searchInCollection) {
+            setCollectionPage(1)
+            setAvailableCards([])
+            setHasMoreCollectionCards(true)
+            loadAvailableCards('', 1, false)
+        }
+    }, [searchInCollection, loadAvailableCards])
 
     // Calculate deck statistics
     useEffect(() => {
@@ -187,6 +238,8 @@ export function useDeckDetail(deckId: string | undefined) {
         searchInCollection,
         setSearchInCollection,
         isSearchingAllCards,
+        isLoadingCollectionCards,
+        hasMoreCollectionCards,
         stats,
 
         // Loading states
@@ -197,6 +250,7 @@ export function useDeckDetail(deckId: string | undefined) {
         handleEditCard,
         handleRemoveCard,
         getValidationStatus,
-        loadDeckData
+        loadDeckData,
+        loadMoreCollectionCards
     }
 }

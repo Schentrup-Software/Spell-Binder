@@ -21,12 +21,15 @@ export default function DeckDetail() {
         searchInCollection,
         setSearchInCollection,
         isSearchingAllCards,
+        isLoadingCollectionCards,
+        hasMoreCollectionCards,
         stats,
         isLoading,
         handleAddCard,
         handleEditCard,
         handleRemoveCard,
-        getValidationStatus
+        getValidationStatus,
+        loadMoreCollectionCards
     } = useDeckDetail(deckId)
 
     // Modal state and operations
@@ -102,6 +105,9 @@ export default function DeckDetail() {
                     setSearchInCollection={setSearchInCollection}
                     isSearchingAllCards={isSearchingAllCards}
                     isLoadingCards={isLoading('cards')}
+                    isLoadingCollectionCards={isLoadingCollectionCards}
+                    hasMoreCollectionCards={hasMoreCollectionCards}
+                    loadMoreCollectionCards={loadMoreCollectionCards}
                 />
             </div>
         </ErrorBoundary>

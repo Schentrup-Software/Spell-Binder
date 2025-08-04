@@ -27,9 +27,10 @@ interface DeckDetailModalsProps {
     setSearchInCollection: (searchInCollection: boolean) => void
     isSearchingAllCards: boolean
     isLoadingCards: boolean
-}
-
-export default function DeckDetailModals({
+    isLoadingCollectionCards: boolean
+    hasMoreCollectionCards: boolean
+    loadMoreCollectionCards: () => void
+}export default function DeckDetailModals({
     showAddCardModal,
     onCloseAddCardModal,
     onAddCard,
@@ -46,7 +47,10 @@ export default function DeckDetailModals({
     searchInCollection,
     setSearchInCollection,
     isSearchingAllCards,
-    isLoadingCards
+    isLoadingCards,
+    isLoadingCollectionCards,
+    hasMoreCollectionCards,
+    loadMoreCollectionCards
 }: DeckDetailModalsProps) {
     return (
         <>
@@ -65,6 +69,9 @@ export default function DeckDetailModals({
                 setSearchInCollection={setSearchInCollection}
                 isSearchingAllCards={isSearchingAllCards}
                 isLoadingCards={isLoadingCards}
+                isLoadingCollectionCards={isLoadingCollectionCards}
+                hasMoreCollectionCards={hasMoreCollectionCards}
+                loadMoreCollectionCards={loadMoreCollectionCards}
             />
 
             {/* Edit Card Modal */}
