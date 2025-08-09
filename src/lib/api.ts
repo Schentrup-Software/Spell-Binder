@@ -1,4 +1,4 @@
-import { Card, CardFilters, CollectionEntry, CardCondition, Deck, DeckCard, DeckFormat, DeckCardType } from './types';
+import { Card, CardFilters, CollectionEntry, CardCondition, Deck, DeckCard, DeckFormat, DeckCardType, EDHRECRequest, EDHRECResponse } from './types';
 import { createAppError, logError } from './errorHandling';
 import { COLLECTIONS } from './pocketbase';
 import pb from './pocketbase';
@@ -488,6 +488,87 @@ export async function removeCardFromDeck(deckCardId: string): Promise<void> {
   } catch (error) {
     const appError = createAppError(error, 'Remove card from deck');
     logError(appError, 'removeCardFromDeck');
+    throw appError;
+  }
+}
+
+/**
+ * Fetch EDHREC recommendations for a deck
+ * @param deckCards Array of deck cards
+ * @param commanders Array of commander names
+ * @param excludeLands Whether to exclude land recommendations
+ * @param offset Offset for pagination
+ * @returns Promise with EDHREC recommendations
+ */
+export async function getEDHRECRecommendations(
+  deckCards: DeckCard[],
+  commanders: string[],
+  excludeLands: boolean = false,
+  filterToCollection: boolean = false,
+  page: number = 0,
+  pageLimit: number = 20
+): Promise<Card[]> {
+  try {
+    // Format deck cards for EDHREC API
+    const cardsInDeck = deckCards
+      .filter(deckCard => deckCard.expand?.card?.name) // Ensure card names are available
+      .map(deckCard => 
+        `${deckCard.quantity} ${deckCard.expand?.card?.name}`
+      );
+
+    const request: EDHRECRequest = {
+      cards: cardsInDeck,
+      commanders,
+      name: "",
+      options: {
+        excludeLands,
+        offset: page * pageLimit,
+      }
+    };
+
+    const response = await fetch('https://edhrec.com/api/recs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      throw new Error(`EDHREC API error: ${response.statusText}`);
+    }
+
+    const data: EDHRECResponse = await response.json();
+
+    if (!data || !data.inRecs || !Array.isArray(data.inRecs)) {
+      console.warn('Invalid EDHREC response format', data);
+      return [];
+    }
+    
+    let cards = [];
+    if (filterToCollection) {
+      const collection = await pb.collection(COLLECTIONS.COLLECTIONS).getList(0, 20, {
+        filter: data.inRecs.map(rec => `card.name = "${rec.name}"`).join(' || '),
+        expand: 'card',
+      });
+      cards = collection.items
+        .filter(item => item.expand?.card)
+        .map(item => item.expand?.card);
+    } else {
+      cards = (await pb.collection(COLLECTIONS.CARDS).getList(0, 20, {
+        filter: data.inRecs.map(rec => `name = "${rec.name}"`).join(' || '),
+      })).items;
+    }
+    
+
+    return cards.map(item => createCardFromRecord(item));
+  } catch (error) {
+    const appError = createAppError(
+      error instanceof Error ? error.message : 'Failed to fetch EDHREC recommendations',
+      'EDHREC_ERROR'
+    );
+    logError(appError, 'getEDHRECRecommendations');
     throw appError;
   }
 }

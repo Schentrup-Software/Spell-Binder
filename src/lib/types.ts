@@ -126,3 +126,39 @@ export type DeckFormat =
  * Types of cards in a deck
  */
 export type DeckCardType = 'library' | 'commander' | 'co-commander';
+
+/**
+ * EDHREC API types
+ */
+export interface EDHRECRequest {
+  cards: string[];
+  commanders: string[];
+  name?: string;
+  options: {
+    excludeLands: boolean;
+    offset: number;
+  };
+}
+
+export interface EDHRECCommander {
+  name: string;
+  oracle_id: string;
+  primary_type: string;
+  salt: number;
+  names: string[];
+}
+
+export interface EDHRECRecommendation {
+  name: string;
+  oracle_id: string;
+  primary_type: string;
+  salt: number;
+  names: string[];
+  score: number;
+}
+
+export interface EDHRECResponse {
+  commanders: EDHRECCommander[];
+  deck: Record<string, number>;
+  inRecs: EDHRECRecommendation[];
+}
