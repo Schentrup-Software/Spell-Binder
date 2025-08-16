@@ -16,7 +16,8 @@ export default function Navigation() {
     { path: '/', label: 'Dashboard' },
     { path: '/collection', label: 'Collection' },
     { path: '/decks', label: 'Decks' },
-    { path: '/search', label: 'Add Cards' }
+    { path: '/search', label: 'Add Cards' },
+    { path: '/scanner', label: 'Scanner' }
   ]
 
   const handleLogout = () => {

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Dashboard from './components/Dashboard'
 import CollectionView from './components/CollectionView'
 import CardSearch from './components/CardSearch'
+import CardScanner from './components/CardScanner'
 import DeckView from './components/DeckView'
 import DeckDetail from './components/DeckDetail'
 import NotFound from './components/NotFound'
@@ -62,6 +63,7 @@ function AuthenticatedApp() {
           <Route path="/decks" element={<DeckView />} />
           <Route path="/decks/:deckId" element={<DeckDetail />} />
           <Route path="/search" element={<CardSearch />} />
+          <Route path="/scanner" element={<CardScanner />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>
