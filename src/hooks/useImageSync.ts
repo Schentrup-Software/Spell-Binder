@@ -91,7 +91,7 @@ export function useImageSync() {
 
   // Auto-refresh status periodically when sync is in progress
   useEffect(() => {
-    let intervalId: number | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
     
     if (syncStatus?.status === 'in_progress') {
       intervalId = setInterval(fetchSyncStatus, 2000); // Check every 2 seconds

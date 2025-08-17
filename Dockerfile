@@ -50,9 +50,9 @@ COPY --from=builder /app/pocketbase/pb_public ./pb_public
 RUN chown -R pocketbase:pocketbase ./pb_public
 
 # Copy PocketBase hooks and migrations if they exist
-COPY --from=builder /app/pocketbase/pb_hooks ./pb_hooks 2>/dev/null || true
-COPY --from=builder /app/pocketbase/pb_migrations ./pb_migrations 2>/dev/null || true
-RUN chown -R pocketbase:pocketbase ./pb_hooks ./pb_migrations 2>/dev/null || true
+COPY --from=builder /app/pocketbase/pb_hooks ./pb_hooks
+COPY --from=builder /app/pocketbase/pb_migrations ./pb_migrations
+RUN chown -R pocketbase:pocketbase ./pb_hooks ./pb_migrations
 
 # Create data directory for PocketBase database with proper permissions
 RUN mkdir -p pb_data && chown -R pocketbase:pocketbase pb_data

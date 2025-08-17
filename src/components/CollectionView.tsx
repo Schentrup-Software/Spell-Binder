@@ -62,6 +62,9 @@ export default function CollectionView() {
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(100)
 
+  setPage(1); // temp to fix ts issue
+  setLimit(100);
+
   // Parse filters from URL on component mount
   useEffect(() => {
     if (pageLoaded) return; // Only run this once
