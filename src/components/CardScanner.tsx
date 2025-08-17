@@ -1,5 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import Tesseract from 'tesseract.js'
+import { Jimp } from 'jimp'
+
+import twoLetterWords from '../ref/twoLetterWords'
 
 export default function CardScanner() {
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -131,22 +134,52 @@ export default function CardScanner() {
                 const cardImage = extractCard(canvas, cardCorners)
 
                 if (cardImage) {
-                    console.log(`✂️ Card extracted: ${cardImage.width}×${cardImage.height}`)
+                    console.log(`✂️ Card extracted: ${cardImage.width}x${cardImage.height}`)
                     setDetectedCard(cardImage.toDataURL('image/png'))
 
-                    // Create a cropped version for OCR (top 12% where the title is)
+                    // Convert card image to Jimp for advanced processing
+                    const cardCtx = cardImage.getContext('2d')!
+                    const cardImageData = cardCtx.getImageData(0, 0, cardImage.width, cardImage.height)
+
+                    const jimpCard = await Jimp.fromBitmap({
+                        data: cardImageData.data,
+                        width: cardImage.width,
+                        height: cardImage.height
+                    })
+
+                    // Crop to top 12% of the card where the title is located
                     const titleHeight = Math.round(cardImage.height * 0.12)
+                    const croppedCard = jimpCard.crop({
+                        x: 0,
+                        y: 0,
+                        w: cardImage.width,
+                        h: titleHeight
+                    })
+
+                    // Apply image enhancements for better OCR
+                    croppedCard
+                        .greyscale()
+                        .contrast(.730)
+
+                    // Convert enhanced Jimp image back to canvas for OCR
                     const ocrCanvas = document.createElement('canvas')
-                    ocrCanvas.width = cardImage.width
-                    ocrCanvas.height = titleHeight
-
+                    ocrCanvas.width = croppedCard.bitmap.width
+                    ocrCanvas.height = croppedCard.bitmap.height
                     const ocrCtx = ocrCanvas.getContext('2d')!
-                    // Draw only the top 12% of the card
-                    ocrCtx.drawImage(cardImage, 0, 0, cardImage.width, titleHeight, 0, 0, cardImage.width, titleHeight)
 
-                    // Run OCR on the cropped title area
+                    const processedImageData = ocrCtx.createImageData(ocrCanvas.width, ocrCanvas.height)
+                    const jimpData = croppedCard.bitmap.data
+
+                    // Copy pixel data from Jimp to ImageData (both use RGBA format)
+                    for (let i = 0; i < processedImageData.data.length; i++) {
+                        processedImageData.data[i] = jimpData[i]
+                    }
+
+                    ocrCtx.putImageData(processedImageData, 0, 0)
+
+                    // Get the final processed image for OCR
                     const ocrImageData = ocrCanvas.toDataURL('image/png')
-                    console.log(`🔤 OCR area cropped: ${ocrCanvas.width}×${ocrCanvas.height} (top 12% of card)`)
+                    console.log(`🔤 OCR area processed with Jimp: ${ocrCanvas.width}x${ocrCanvas.height} (top 12% of card, enhanced)`)
 
                     // Store debug OCR image if debug mode is enabled
                     if (showDebug) {
@@ -318,10 +351,20 @@ export default function CardScanner() {
         // Look for title-like text (usually in the first few lines)
         for (const line of lines.slice(0, 5)) {
             // Clean the line but preserve apostrophes
-            const cleaned = line
-                .replace(/[^\w\s']/g, ' ')  // Keep apostrophes in addition to word characters and spaces
+            const cleanedOfSpecialChars = line
+                .replace(/[^\w\s'-.]/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim()
+
+            const splitOnWords = cleanedOfSpecialChars.split(' ');
+            let cleaned = '';
+
+            for (const word of splitOnWords) {
+                // Discard one or 2 letter words that are not a common English word
+                if (word.length > 2 || twoLetterWords.has(word.toLowerCase())) {
+                    cleaned += word + ' ';
+                }
+            }
 
             // Card titles are typically 3-50 characters
             if (cleaned.length >= 3 && cleaned.length <= 50) {
@@ -1085,7 +1128,7 @@ export default function CardScanner() {
                                             className="w-full border border-gray-600 rounded"
                                         />
                                         <p className="text-xs text-gray-400 mt-2">
-                                            This is the exact image sent to Tesseract OCR after perspective correction
+                                            Enhanced with Jimp: cropped to title area (top 12%), grayscale, contrast boost, normalization, and thresholding
                                         </p>
                                     </div>
                                 )}
