@@ -29,33 +29,25 @@ RUN apk update && apk upgrade && \
     dumb-init \
     && rm -rf /var/cache/apk/*
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S pocketbase && \
-    adduser -S -D -H -u 1001 -s /sbin/nologin -G pocketbase pocketbase
-
 # Create app directory with proper permissions
 WORKDIR /pb
-RUN chown -R pocketbase:pocketbase /pb
 
 # Download and install PocketBase
 ARG PB_VERSION=0.28.4
 RUN wget https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip \
     && unzip pocketbase_${PB_VERSION}_linux_amd64.zip \
     && chmod +x pocketbase \
-    && chown pocketbase:pocketbase pocketbase \
     && rm pocketbase_${PB_VERSION}_linux_amd64.zip
 
 # Copy built React app from builder stage
 COPY --from=builder /app/pocketbase/pb_public ./pb_public
-RUN chown -R pocketbase:pocketbase ./pb_public
 
 # Copy PocketBase hooks and migrations if they exist
 COPY --from=builder /app/pocketbase/pb_hooks ./pb_hooks
 COPY --from=builder /app/pocketbase/pb_migrations ./pb_migrations
-RUN chown -R pocketbase:pocketbase ./pb_hooks ./pb_migrations
 
-# Create data directory for PocketBase database with proper permissions
-RUN mkdir -p pb_data && chown -R pocketbase:pocketbase pb_data
+# Create data directory for PocketBase database
+RUN mkdir -p pb_data
 
 # Environment variables with defaults
 ENV PB_ENCRYPTION_KEY=""
@@ -66,9 +58,6 @@ ENV PB_DATA_DIR="/pb/pb_data"
 ENV PB_HOOKS_DIR="/pb/pb_hooks"
 ENV PB_MIGRATIONS_DIR="/pb/pb_migrations"
 ENV PB_PUBLIC_DIR="/pb/pb_public"
-
-# Switch to non-root user
-USER pocketbase
 
 # Expose port
 EXPOSE 8080
