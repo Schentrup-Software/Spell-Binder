@@ -81,4 +81,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 # Start PocketBase with environment variable support
-CMD ["sh", "-c", "./pocketbase serve --http=${PB_HTTP_ADDR} --dir=${PB_DATA_DIR} --hooksDir=${PB_HOOKS_DIR} --migrationsDir=${PB_MIGRATIONS_DIR} --publicDir=${PB_PUBLIC_DIR}"]
+CMD ["sh", "-c", "/pb/pocketbase serve --http=${PB_HTTP_ADDR} --dir=${PB_DATA_DIR} --hooksDir=${PB_HOOKS_DIR} --migrationsDir=${PB_MIGRATIONS_DIR} --publicDir=${PB_PUBLIC_DIR}"]
