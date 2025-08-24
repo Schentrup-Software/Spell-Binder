@@ -1,7 +1,15 @@
 import PocketBase from 'pocketbase'
 
+// Getbase URL browser
+let baseUrl = window.location.origin;
+
+if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
+  // Running on localhost, use default PocketBase URL
+  baseUrl = 'http://localhost:8090';
+}
+
 // PocketBase client configuration
-const pb = new PocketBase(import.meta.env.VITE_POCKETBASE_URL || 'http://localhost:8090')
+const pb = new PocketBase(baseUrl);
 
 // Enable auto cancellation for duplicate requests
 pb.autoCancellation(false)

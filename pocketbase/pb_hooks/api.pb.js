@@ -111,10 +111,10 @@ routerAdd("GET", "/api/cards", (e) => {
 
     return e.json(200, {
         items: result.map(card => {
-            const price = prices.find(p => p.get('card_id') === card.id) || {};
+            const price = prices.find(p => p.get('card_id') === card.id) || null;
             return {
                 ...card,
-                price_usd: price.get('price_usd') || null
+                price_usd: price?.get('price_usd') || null
             };
         })
     })
