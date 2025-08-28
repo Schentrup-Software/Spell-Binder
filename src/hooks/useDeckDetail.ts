@@ -62,7 +62,7 @@ export function useDeckDetail(deckId: string | undefined) {
                 handleError(error, 'Failed to load deck')
             }
         })
-    }, [deckId, withLoading, handleError])
+    }, [deckId])
 
     const loadAvailableCards = useCallback((query: string = '', page: number = 1, append: boolean = false) => {
         setIsLoadingCollectionCards(true)
@@ -88,7 +88,7 @@ export function useDeckDetail(deckId: string | undefined) {
                 setIsLoadingCollectionCards(false)
             }
         })
-    }, [withLoading, handleError])
+    }, [])
 
     // Load more collection cards (for pagination)
     const loadMoreCollectionCards = useCallback(() => {
@@ -97,21 +97,21 @@ export function useDeckDetail(deckId: string | undefined) {
             setCollectionPage(nextPage)
             loadAvailableCards(debouncedSearchQuery, nextPage, true)
         }
-    }, [hasMoreCollectionCards, isLoadingCollectionCards, collectionPage, debouncedSearchQuery, loadAvailableCards])
+    }, [hasMoreCollectionCards, isLoadingCollectionCards, collectionPage, debouncedSearchQuery])
 
     // Load deck and cards on component mount
     useEffect(() => {
         if (deckId) {
             loadDeckData()
         }
-    }, [deckId, loadDeckData])
+    }, [deckId])
 
     // Load initial collection when component mounts
     useEffect(() => {
         if (deckId) {
             loadAvailableCards() // Load initial collection without search
         }
-    }, [deckId, loadAvailableCards])
+    }, [deckId])
 
     // Search collection when query changes and searching in collection
     useEffect(() => {
@@ -119,7 +119,7 @@ export function useDeckDetail(deckId: string | undefined) {
             setCollectionPage(1)
             loadAvailableCards(debouncedSearchQuery, 1, false)
         }
-    }, [searchInCollection, debouncedSearchQuery, loadAvailableCards])
+    }, [searchInCollection, debouncedSearchQuery])
 
     // Reset collection state when switching search modes
     useEffect(() => {
@@ -129,7 +129,7 @@ export function useDeckDetail(deckId: string | undefined) {
             setHasMoreCollectionCards(true)
             loadAvailableCards('', 1, false)
         }
-    }, [searchInCollection, loadAvailableCards])
+    }, [searchInCollection])
 
     // Calculate deck statistics
     useEffect(() => {
@@ -154,7 +154,7 @@ export function useDeckDetail(deckId: string | undefined) {
         } finally {
             setIsSearchingAllCards(false)
         }
-    }, [handleError])
+    }, [])
 
     // Effect for searching all cards when toggle is off and query changes
     useEffect(() => {
@@ -163,7 +163,7 @@ export function useDeckDetail(deckId: string | undefined) {
         } else if (!searchInCollection) {
             setAllCards([])
         }
-    }, [searchInCollection, debouncedSearchQuery, searchAllCards])
+    }, [searchInCollection, debouncedSearchQuery])
 
     // Handle adding card to deck
     const handleAddCard = useCallback(async (card: Card, quantity: number, type: DeckCardType) => {
@@ -192,7 +192,7 @@ export function useDeckDetail(deckId: string | undefined) {
         } catch (error) {
             handleError(error, 'Failed to add card to deck')
         }
-    }, [deckId, handleSuccess, handleError])
+    }, [deckId])
 
     // Handle editing deck card
     const handleEditCard = useCallback(async (deckCard: DeckCard, quantity: number, type: DeckCardType) => {
@@ -209,7 +209,7 @@ export function useDeckDetail(deckId: string | undefined) {
         } catch (error) {
             handleError(error, 'Failed to update card')
         }
-    }, [handleSuccess, handleError])
+    }, [])
 
     // Handle removing card from deck
     const handleRemoveCard = useCallback(async (deckCard: DeckCard) => {
@@ -220,7 +220,7 @@ export function useDeckDetail(deckId: string | undefined) {
         } catch (error) {
             handleError(error, 'Failed to remove card from deck')
         }
-    }, [handleSuccess, handleError])
+    }, [])
 
     // Get deck validation status
     const getValidationStatus = useCallback(() => {

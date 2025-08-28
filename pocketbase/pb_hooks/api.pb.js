@@ -119,3 +119,7 @@ routerAdd("GET", "/api/cards", (e) => {
         })
     })
 });
+
+routerAdd("GET", "/api/cards/image", (e) => {
+    const utils = require(`pixelmatch`)
+});

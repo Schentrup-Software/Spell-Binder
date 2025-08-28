@@ -63,7 +63,7 @@ export default function AddCardModal({
             setSearchQuery('')
             setSearchInCollection(true)
         }
-    }, [isOpen, setSearchQuery, setSearchInCollection])
+    }, [isOpen])
 
     // Effect to automatically set cardType to library when no special options are selected
     useEffect(() => {
@@ -136,9 +136,7 @@ export default function AddCardModal({
 
     // Load recommendations when switching to recommendations tab
     useEffect(() => {
-        if (activeTab === 'recommendations' && edhrecRecommendations.length === 0) {
-            loadEDHRECRecommendations()
-        }
+        loadEDHRECRecommendations()
     }, [activeTab, onlyFromCollection, deck, deckCards, availableCards])
 
     // Helper function to get tooltip message for disabled button

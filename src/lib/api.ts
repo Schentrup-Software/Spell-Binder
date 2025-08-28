@@ -220,7 +220,7 @@ function createCardFromRecord(item: RecordModel): Card {
   }
 
   return {
-    id: item.id,
+    id: item.card_id || item.id,
     scryfall_id: item.scryfall_id,
     name: item.name,
     oracle_text: item.oracle_text,
@@ -551,6 +551,7 @@ export async function getEDHRECRecommendations(
       const collection = await pb.collection(COLLECTIONS.COLLECTIONS).getList(0, 20, {
         filter: data.inRecs.map(rec => `card.name = "${rec.name}"`).join(' || '),
         expand: 'card',
+        perPage: data.inRecs.length
       });
       cards = collection.items
         .filter(item => item.expand?.card)
