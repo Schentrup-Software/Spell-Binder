@@ -1,1 +1,0 @@
-import pixelmatch from "pixelmatch";

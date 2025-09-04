@@ -120,6 +120,76 @@ routerAdd("GET", "/api/cards", (e) => {
     })
 });
 
-routerAdd("GET", "/api/cards/image", (e) => {
-    const utils = require(`pixelmatch`)
+routerAdd("POST", "/api/cards/image", (e) => {
+    let body = e.requestInfo().body;
+    const title = body.title || "";
+
+    if (title.length === 0) {
+        return e.json(400, { error: "Title is required" });
+    }
+
+    const cards = $app.db()
+        .newQuery(`
+            SELECT
+                c.id,
+                c.scryfall_id,
+                c.name,
+                c.oracle_text,
+                c.set_code,
+                c.set_name,
+                c.rarity,
+                c.mana_cost,
+                c.type_line,
+                c.colors,
+                COALESCE(
+                    JSON_EXTRACT(c.image_uris, '$.normal'),
+                    JSON_EXTRACT(c.image_uris, '$.png'),
+                    JSON_EXTRACT(c.image_uris, '$.art_crop'),
+                    JSON_EXTRACT(c.image_uris, '$.border_crop'),
+                    JSON_EXTRACT(c.image_uris, '$.large'),
+                    JSON_EXTRACT(c.image_uris, '$.small'),
+                    ''
+                ) AS image_uri,
+                COALESCE(JSON_EXTRACT(c.image_uris, '$.small'), '') AS image_uri_small,
+                c.image_file,
+                c.last_updated
+            FROM search_text_fts s
+            JOIN cards c ON c.scryfall_id = s.card_id
+            WHERE 
+                s.name MATCH {:searchText}
+            GROUP BY c.name;
+        `).bind({
+            searchText: searchText,
+        });
+
+    const result = arrayOf(new DynamicModel({
+        "id": "",
+        "scryfall_id": "",
+        "oracle_text": "",
+        "name": "",
+        "set_code": "",
+        "set_name": "",
+        "rarity": "",
+        "mana_cost": "",
+        "type_line": "",
+        "colors": [],
+        "image_uri": "",
+        "image_uri_small": "",
+        "image_file": "",
+        "last_updated": ""
+    }))
+    cards.all(result)
+
+    if (result.length === 0) {
+        return e.json(200, { card: null });
+    } else if (result.length === 1) {
+        return e.json(200, { card: result[0] });
+    }
+
+
+    let files = e.findUploadedFiles("picture");
+
+    const utils = require(`${__hooks}/utils.js`);
+
+    utils.pixelmatch("World")
 });
