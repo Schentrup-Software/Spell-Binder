@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#1a1a2e" stroke="#6b46c1" stroke-width="3"/>
+  
+  <!-- Magic book/grimoire -->
+  <g id="book">
+    <!-- Book cover -->
+    <rect x="60" y="70" width="80" height="90" rx="4" fill="#4a5568"/>
+    <rect x="62" y="72" width="76" height="86" rx="3" fill="#2d3748"/>
+    
+    <!-- Book spine highlight -->
+    <rect x="60" y="70" width="8" height="90" rx="4" fill="#5a67d8"/>
+    
+    <!-- Book pages -->
+    <rect x="68" y="75" width="67" height="80" rx="2" fill="#f7fafc"/>
+    
+    <!-- Page lines (spell text) -->
+    <line x1="75" y1="85" x2="125" y2="85" stroke="#a0aec0" stroke-width="1.5"/>
+    <line x1="75" y1="92" x2="120" y2="92" stroke="#a0aec0" stroke-width="1.5"/>
+    <line x1="75" y1="99" x2="128" y2="99" stroke="#a0aec0" stroke-width="1.5"/>
+    <line x1="75" y1="106" x2="115" y2="106" stroke="#a0aec0" stroke-width="1.5"/>
+    
+    <!-- Magical symbol on book -->
+    <circle cx="100" cy="130" r="12" fill="none" stroke="#805ad5" stroke-width="2"/>
+    <path d="M 100 118 L 100 142 M 88 130 L 112 130" stroke="#805ad5" stroke-width="2"/>
+    <circle cx="100" cy="130" r="4" fill="#d6bcfa"/>
+  </g>
+  
+  <!-- Magic sparkles/stars -->
+  <g id="sparkles" fill="#fbbf24">
+    <!-- Top left sparkle -->
+    <path d="M 45 50 L 47 55 L 52 57 L 47 59 L 45 64 L 43 59 L 38 57 L 43 55 Z"/>
+    
+    <!-- Top right sparkle -->
+    <path d="M 155 45 L 157 50 L 162 52 L 157 54 L 155 59 L 153 54 L 148 52 L 153 50 Z"/>
+    
+    <!-- Bottom left sparkle (smaller) -->
+    <path d="M 50 150 L 51.5 153 L 54.5 154.5 L 51.5 156 L 50 159 L 48.5 156 L 45.5 154.5 L 48.5 153 Z"/>
+    
+    <!-- Bottom right sparkle -->
+    <path d="M 150 155 L 152 160 L 157 162 L 152 164 L 150 169 L 148 164 L 143 162 L 148 160 Z"/>
+    
+    <!-- Top center small sparkle -->
+    <circle cx="100" cy="35" r="2"/>
+    <circle cx="95" cy="38" r="1"/>
+    <circle cx="105" cy="38" r="1"/>
+  </g>
+  
+  <!-- Magical energy arc -->
+  <path d="M 140 90 Q 160 100 140 110" stroke="#9f7aea" stroke-width="2" fill="none" opacity="0.6"/>
+  <path d="M 60 95 Q 40 105 60 115" stroke="#9f7aea" stroke-width="2" fill="none" opacity="0.6"/>
+  
+  <!-- Additional magical particles -->
+  <circle cx="75" cy="60" r="1.5" fill="#d6bcfa" opacity="0.8"/>
+  <circle cx="125" cy="65" r="1.5" fill="#d6bcfa" opacity="0.8"/>
+  <circle cx="145" cy="135" r="1.5" fill="#d6bcfa" opacity="0.8"/>
+  <circle cx="55" cy="125" r="1.5" fill="#d6bcfa" opacity="0.8"/>
+</svg>

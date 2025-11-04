@@ -44,7 +44,12 @@ export default function Navigation() {
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
+            <img
+              src="/spell-binder-logo.svg"
+              alt="Spell Binder Logo"
+              className="h-10 w-10"
+            />
             <h1 className="text-xl font-bold text-gray-900">
               Spell Binder
             </h1>

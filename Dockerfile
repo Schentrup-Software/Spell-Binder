@@ -41,6 +41,7 @@ RUN wget https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSIO
 
 # Copy built React app from builder stage
 COPY --from=builder /app/pocketbase/pb_public ./pb_public
+COPY --from=builder /app/public/ ./pb_public
 
 # Copy PocketBase hooks and migrations if they exist
 COPY --from=builder /app/pocketbase/pb_hooks ./pb_hooks
