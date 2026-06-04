@@ -59,11 +59,8 @@ export default function CollectionView() {
     sortDirection: 'asc',
     searchQuery: ''
   })
-  const [page, setPage] = useState(1)
-  const [limit, setLimit] = useState(100)
-
-  setPage(1); // temp to fix ts issue
-  setLimit(100);
+  const [page] = useState(1)
+  const [limit] = useState(100)
 
   // Parse filters from URL on component mount
   useEffect(() => {
