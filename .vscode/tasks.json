@@ -2,11 +2,37 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Start Pocketbase",
+            "label": "Start PocketBase",
             "type": "shell",
-            "command": "/pb/pocketbase serve --http=${PB_HTTP_ADDR} --dir=${PB_DATA_DIR} --hooksDir=${PB_HOOKS_DIR} --migrationsDir=${PB_MIGRATIONS_DIR} --publicDir=${PB_PUBLIC_DIR}",
+            "command": "cd pocketbase && .\\pocketbase.exe serve --http=0.0.0.0:8090 --dir=pb_data --hooksDir=pb_hooks --migrationsDir=pb_migrations",
             "group": "build",
-            "detail": "Start Pocketbase server"
+            "detail": "Start PocketBase server (http://localhost:8090)",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "isBackground": true
+        },
+        {
+            "label": "Start Dev Server",
+            "type": "shell",
+            "command": "npm run dev",
+            "group": "build",
+            "detail": "Start Vite React dev server (http://localhost:3000)",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "isBackground": true
+        },
+        {
+            "label": "Start All (Dev)",
+            "dependsOn": ["Start PocketBase", "Start Dev Server"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Start both PocketBase and the React dev server"
         }
     ]
 }
