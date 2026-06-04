@@ -1,6 +1,6 @@
 import AddCardModal from './AddCardModal'
 import EditCardModal from './EditCardModal'
-import { Deck, DeckCard, DeckCardType, Card } from '../lib/types'
+import { Deck, DeckCard, DeckCardType, Card, CardFilters } from '../lib/types'
 
 interface DeckDetailModalsProps {
     // Add Card Modal Props
@@ -23,6 +23,8 @@ interface DeckDetailModalsProps {
     allCards: Card[]
     searchQuery: string
     setSearchQuery: (query: string) => void
+    searchFilters: Pick<CardFilters, 'set' | 'type'>
+    setSearchFilters: (filters: Pick<CardFilters, 'set' | 'type'>) => void
     searchInCollection: boolean
     setSearchInCollection: (searchInCollection: boolean) => void
     isSearchingAllCards: boolean
@@ -44,6 +46,8 @@ interface DeckDetailModalsProps {
     allCards,
     searchQuery,
     setSearchQuery,
+    searchFilters,
+    setSearchFilters,
     searchInCollection,
     setSearchInCollection,
     isSearchingAllCards,
@@ -65,6 +69,8 @@ interface DeckDetailModalsProps {
                 allCards={allCards}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
+                searchFilters={searchFilters}
+                setSearchFilters={setSearchFilters}
                 searchInCollection={searchInCollection}
                 setSearchInCollection={setSearchInCollection}
                 isSearchingAllCards={isSearchingAllCards}

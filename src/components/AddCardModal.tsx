@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import Modal from './Modal'
 import CardImage from './CardImage'
 import LoadingSpinner from './LoadingSpinner'
-import { Card, DeckCard, DeckCardType, Deck } from '../lib/types'
+import { Card, CardFilters, DeckCard, DeckCardType, Deck } from '../lib/types'
 import { getDeckConstraints, getMaxQuantityForCard, isCommanderSlotAvailable } from '../lib/deckConstraints'
-import { getEDHRECRecommendations } from '../lib/api'
+import { getCardSets, getEDHRECRecommendations } from '../lib/api'
 
 interface AddCardModalProps {
     isOpen: boolean
@@ -16,6 +16,8 @@ interface AddCardModalProps {
     allCards: Card[]
     searchQuery: string
     setSearchQuery: (query: string) => void
+    searchFilters: Pick<CardFilters, 'set' | 'type'>
+    setSearchFilters: (filters: Pick<CardFilters, 'set' | 'type'>) => void
     searchInCollection: boolean
     setSearchInCollection: (value: boolean) => void
     isSearchingAllCards: boolean
@@ -35,6 +37,8 @@ export default function AddCardModal({
     allCards,
     searchQuery,
     setSearchQuery,
+    searchFilters,
+    setSearchFilters,
     searchInCollection,
     setSearchInCollection,
     isSearchingAllCards,
@@ -52,7 +56,10 @@ export default function AddCardModal({
     const [edhrecRecommendations, setEdhrecRecommendations] = useState<Card[]>([])
     const [edhrecLoading, setEdhrecLoading] = useState(false)
     const [onlyFromCollection, setOnlyFromCollection] = useState(false)
+    const [setOptions, setSetOptions] = useState<{ code: string, name: string }[]>([])
+    const [isLoadingSetOptions, setIsLoadingSetOptions] = useState(false)
     const buttonRef = useRef<HTMLButtonElement>(null)
+    const typeOptions = ['Land', 'Creature', 'Artifact', 'Enchantment', 'Planeswalker', 'Battle', 'Instant', 'Sorcery', 'Kindred']
 
     // Reset form when modal opens/closes
     useEffect(() => {
@@ -61,9 +68,29 @@ export default function AddCardModal({
             setCardQuantity(1)
             setCardType('library')
             setSearchQuery('')
+            setSearchFilters({})
             setSearchInCollection(true)
         }
-    }, [isOpen])
+    }, [isOpen, setSearchFilters, setSearchInCollection, setSearchQuery])
+
+    useEffect(() => {
+        if (!isOpen) return
+
+        const loadSetOptions = async () => {
+            setIsLoadingSetOptions(true)
+            try {
+                const options = await getCardSets(searchInCollection)
+                setSetOptions(options)
+            } catch (error) {
+                console.error('Failed to load set options:', error)
+                setSetOptions([])
+            } finally {
+                setIsLoadingSetOptions(false)
+            }
+        }
+
+        loadSetOptions()
+    }, [isOpen, searchInCollection])
 
     // Effect to automatically set cardType to library when no special options are selected
     useEffect(() => {
@@ -274,6 +301,50 @@ export default function AddCardModal({
                             placeholder={searchInCollection ? "Search your collection..." : "Search all Magic cards..."}
                             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                         />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Filter by Set
+                            </label>
+                            <select
+                                value={searchFilters.set || ''}
+                                onChange={(e) => setSearchFilters({
+                                    ...searchFilters,
+                                    set: e.target.value || undefined
+                                })}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                disabled={isLoadingSetOptions}
+                            >
+                                <option value="">All Sets</option>
+                                {setOptions.map((set) => (
+                                    <option key={set.code} value={set.code}>
+                                        {set.name} ({set.code})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Filter by Type
+                            </label>
+                            <select
+                                value={searchFilters.type || ''}
+                                onChange={(e) => setSearchFilters({
+                                    ...searchFilters,
+                                    type: e.target.value || undefined
+                                })}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="">All Types</option>
+                                {typeOptions.map((type) => (
+                                    <option key={type} value={type}>
+                                        {type}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     {/* Card Selection */}
