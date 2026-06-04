@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import Modal from './Modal'
 import LoadingSpinner from './LoadingSpinner'
 import { Card, Deck } from '../lib/types'
-import { addCardToDeck, getUserDecks } from '../lib/api'
+import { addCardToDeck, getUserDecks, getDeckCards } from '../lib/api'
 
 interface AddToDeckFromCardModalProps {
   isOpen: boolean
@@ -23,6 +23,7 @@ export default function AddToDeckFromCardModal({
   const [selectedDeckId, setSelectedDeckId] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [error, setError] = useState<string | null>(null)
+  const [cardCountInDeck, setCardCountInDeck] = useState(0)
 
   useEffect(() => {
     if (!isOpen) return
@@ -45,6 +46,24 @@ export default function AddToDeckFromCardModal({
 
     loadDecks()
   }, [isOpen])
+
+  useEffect(() => {
+    if (!selectedDeckId || !card) return
+
+    const loadCardCount = async () => {
+      try {
+        const deckCards = await getDeckCards(selectedDeckId)
+        const count = deckCards
+          .filter((dc) => dc.expand?.card?.id === card.id)
+          .reduce((sum, dc) => sum + dc.quantity, 0)
+        setCardCountInDeck(count)
+      } catch (err) {
+        setCardCountInDeck(0)
+      }
+    }
+
+    loadCardCount()
+  }, [selectedDeckId, card])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,6 +126,11 @@ export default function AddToDeckFromCardModal({
                   </option>
                 ))}
               </select>
+              <p className="mt-2 text-sm text-gray-600">
+                {cardCountInDeck > 0
+                  ? `${cardCountInDeck} ${cardCountInDeck === 1 ? 'copy' : 'copies'} already in this deck`
+                  : 'No copies in this deck yet'}
+              </p>
             </div>
 
             <div>

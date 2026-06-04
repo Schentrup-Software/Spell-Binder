@@ -79,7 +79,7 @@ export default function Modal({
                 </h3>
                 <button
                   type="button"
-                  className="text-gray-400 hover:text-gray-500 focus:outline-none p-1 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors touch-manipulation"
+                  className="flex items-center justify-center text-gray-400 hover:text-gray-500 focus:outline-none w-8 h-8 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors touch-manipulation"
                   onClick={onClose}
                 >
                   <span className="sr-only">Close</span>
