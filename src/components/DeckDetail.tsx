@@ -18,6 +18,8 @@ export default function DeckDetail() {
         allCards,
         searchQuery,
         setSearchQuery,
+        searchFilters,
+        setSearchFilters,
         searchInCollection,
         setSearchInCollection,
         isSearchingAllCards,
@@ -101,6 +103,8 @@ export default function DeckDetail() {
                     allCards={allCards}
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
+                    searchFilters={searchFilters}
+                    setSearchFilters={setSearchFilters}
                     searchInCollection={searchInCollection}
                     setSearchInCollection={setSearchInCollection}
                     isSearchingAllCards={isSearchingAllCards}

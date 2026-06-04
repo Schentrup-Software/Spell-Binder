@@ -8,7 +8,7 @@ import {
     getUserCollection,
     searchCards
 } from '../lib/api'
-import { Deck, DeckCard, Card, DeckCardType } from '../lib/types'
+import { Deck, DeckCard, Card, DeckCardType, CardFilters } from '../lib/types'
 import { calculateDeckStats, DeckStats } from '../lib/deckStats'
 import { getDeckValidationStatus } from '../lib/deckConstraints'
 import { useErrorHandler } from './useErrorHandler'
@@ -21,6 +21,7 @@ export function useDeckDetail(deckId: string | undefined) {
     const [availableCards, setAvailableCards] = useState<Card[]>([])
     const [allCards, setAllCards] = useState<Card[]>([])
     const [searchQuery, setSearchQuery] = useState('')
+    const [searchFilters, setSearchFilters] = useState<Pick<CardFilters, 'set' | 'type'>>({})
     const [searchInCollection, setSearchInCollection] = useState(true)
     const [isSearchingAllCards, setIsSearchingAllCards] = useState(false)
     const [isLoadingCollectionCards, setIsLoadingCollectionCards] = useState(false)
@@ -64,14 +65,22 @@ export function useDeckDetail(deckId: string | undefined) {
         })
     }, [deckId])
 
-    const loadAvailableCards = useCallback((query: string = '', page: number = 1, append: boolean = false) => {
+    const loadAvailableCards = useCallback((
+        query: string = '',
+        page: number = 1,
+        append: boolean = false,
+        filters: Pick<CardFilters, 'set' | 'type'> = searchFilters
+    ) => {
         setIsLoadingCollectionCards(true)
         
         withLoading('cards', async () => {
             try {
-                const filters = query.trim() ? { searchQuery: query } : {}
                 const pageSize = 30
-                const result = await getUserCollection(filters, pageSize, page)
+                const collectionFilters: CardFilters = {
+                    ...filters,
+                    searchQuery: query.trim() || undefined
+                }
+                const result = await getUserCollection(collectionFilters, pageSize, page)
                 
                 if (append) {
                     setAvailableCards(prev => [...prev, ...result])
@@ -88,16 +97,16 @@ export function useDeckDetail(deckId: string | undefined) {
                 setIsLoadingCollectionCards(false)
             }
         })
-    }, [])
+    }, [searchFilters])
 
     // Load more collection cards (for pagination)
     const loadMoreCollectionCards = useCallback(() => {
         if (hasMoreCollectionCards && !isLoadingCollectionCards) {
             const nextPage = collectionPage + 1
             setCollectionPage(nextPage)
-            loadAvailableCards(debouncedSearchQuery, nextPage, true)
+            loadAvailableCards(debouncedSearchQuery, nextPage, true, searchFilters)
         }
-    }, [hasMoreCollectionCards, isLoadingCollectionCards, collectionPage, debouncedSearchQuery])
+    }, [hasMoreCollectionCards, isLoadingCollectionCards, collectionPage, debouncedSearchQuery, searchFilters, loadAvailableCards])
 
     // Load deck and cards on component mount
     useEffect(() => {
@@ -117,9 +126,9 @@ export function useDeckDetail(deckId: string | undefined) {
     useEffect(() => {
         if (searchInCollection && debouncedSearchQuery !== undefined) {
             setCollectionPage(1)
-            loadAvailableCards(debouncedSearchQuery, 1, false)
+            loadAvailableCards(debouncedSearchQuery, 1, false, searchFilters)
         }
-    }, [searchInCollection, debouncedSearchQuery])
+    }, [searchInCollection, debouncedSearchQuery, searchFilters, loadAvailableCards])
 
     // Reset collection state when switching search modes
     useEffect(() => {
@@ -127,9 +136,9 @@ export function useDeckDetail(deckId: string | undefined) {
             setCollectionPage(1)
             setAvailableCards([])
             setHasMoreCollectionCards(true)
-            loadAvailableCards('', 1, false)
+            loadAvailableCards('', 1, false, searchFilters)
         }
-    }, [searchInCollection])
+    }, [searchInCollection, searchFilters, loadAvailableCards])
 
     // Calculate deck statistics
     useEffect(() => {
@@ -138,7 +147,10 @@ export function useDeckDetail(deckId: string | undefined) {
     }, [deckCards])
 
     // Search all cards function
-    const searchAllCards = useCallback(async (query: string) => {
+    const searchAllCards = useCallback(async (
+        query: string,
+        filters: Pick<CardFilters, 'set' | 'type'> = searchFilters
+    ) => {
         if (!query.trim()) {
             setAllCards([])
             return
@@ -146,7 +158,7 @@ export function useDeckDetail(deckId: string | undefined) {
 
         setIsSearchingAllCards(true)
         try {
-            const results = await searchCards(query, {}, 20, 1)
+            const results = await searchCards(query, filters, 20, 1)
             setAllCards(results)
         } catch (error) {
             handleError(error, 'Failed to search all cards')
@@ -154,16 +166,16 @@ export function useDeckDetail(deckId: string | undefined) {
         } finally {
             setIsSearchingAllCards(false)
         }
-    }, [])
+    }, [searchFilters])
 
     // Effect for searching all cards when toggle is off and query changes
     useEffect(() => {
         if (!searchInCollection && debouncedSearchQuery.trim()) {
-            searchAllCards(debouncedSearchQuery)
+            searchAllCards(debouncedSearchQuery, searchFilters)
         } else if (!searchInCollection) {
             setAllCards([])
         }
-    }, [searchInCollection, debouncedSearchQuery])
+    }, [searchInCollection, debouncedSearchQuery, searchFilters, searchAllCards])
 
     // Handle adding card to deck
     const handleAddCard = useCallback(async (card: Card, quantity: number, type: DeckCardType) => {
@@ -235,6 +247,8 @@ export function useDeckDetail(deckId: string | undefined) {
         allCards,
         searchQuery,
         setSearchQuery,
+        searchFilters,
+        setSearchFilters,
         searchInCollection,
         setSearchInCollection,
         isSearchingAllCards,

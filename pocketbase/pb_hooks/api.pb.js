@@ -49,8 +49,8 @@ routerAdd("GET", "/api/cards", (e) => {
             JOIN cards c ON c.scryfall_id = s.card_id
             WHERE 
                 search_text_fts MATCH {:searchText}
-                AND ({:setCode} IS NULL OR c.set_code = {:setCode})
-                AND ({:typeLine} IS NULL OR c.type_line = {:typeLine})
+                AND ({:setCode} IS NULL OR lower(c.set_code) = lower({:setCode}))
+                AND ({:typeLine} IS NULL OR lower(c.type_line) LIKE '%' || lower({:typeLine}) || '%')
                 AND ({:rarity} IS NULL OR c.rarity = {:rarity})
                 AND ({:colorsIsNull} IS NULL OR EXISTS (
                         SELECT 1
