@@ -6,6 +6,7 @@ import FilterBar from './FilterBar'
 import MemoizedCardResult from './MemoizedCardResult'
 import CardDetail from './CardDetail'
 import Modal from './Modal'
+import AddToDeckFromCardModal from './AddToDeckFromCardModal'
 import { Card, CardCondition, CardFilters } from '../lib/types'
 import { searchCards, addCardToCollection } from '../lib/api'
 import useDebounce from '../hooks/useDebounce'
@@ -20,6 +21,7 @@ export default function CardSearch() {
   const [filters, setFilters] = useState<CardFilters>({})
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [showAddToDeckModal, setShowAddToDeckModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasSearched, setHasSearched] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -162,6 +164,11 @@ export default function CardSearch() {
   const handleCardSelect = (card: Card) => {
     setSelectedCard(card)
     setShowModal(true)
+  }
+
+  const handleOpenAddToDeck = () => {
+    setShowModal(false)
+    setShowAddToDeckModal(true)
   }
 
   // Handle adding card to collection
@@ -368,9 +375,17 @@ export default function CardSearch() {
               card={selectedCard}
               onAddToCollection={handleAddToCollection}
               onClose={() => setShowModal(false)}
+              onOpenAddToDeck={handleOpenAddToDeck}
             />
           )}
         </Modal>
+
+        <AddToDeckFromCardModal
+          isOpen={showAddToDeckModal}
+          onClose={() => setShowAddToDeckModal(false)}
+          card={selectedCard}
+          onAdded={(deckName) => handleSuccess(`Added ${selectedCard?.name || 'card'} to ${deckName}`)}
+        />
       </div>
     </ErrorBoundary>
   )
