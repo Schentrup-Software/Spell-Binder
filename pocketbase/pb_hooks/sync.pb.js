@@ -7,5 +7,5 @@ cronAdd("daily_sync", "0 2 * * *", () => {
     console.log("Daily sync job triggered")
 
     const sync = require(`${__hooks}/sync.js`)
-    sync.syncBulkCardData();
+    sync.syncBulkCardData("daily_sync");
 });

@@ -3,6 +3,28 @@ const BATCH_SIZE = 1000 // Process cards in batches to avoid memory issues
 const MAX_RETRIES = 3
 const RETRY_DELAY = 5000 // 5 seconds
 
+function logCronEvent(jobName, status, message, recordsProcessed = null, details = null) {
+    try {
+        const logsCollection = $app.findCollectionByNameOrId("cron_logs")
+        const logRecord = new Record(logsCollection)
+        logRecord.set("job_name", jobName)
+        logRecord.set("status", status)
+        logRecord.set("message", message)
+
+        if (recordsProcessed !== null) {
+            logRecord.set("records_processed", recordsProcessed)
+        }
+
+        if (details !== null) {
+            logRecord.set("details", details)
+        }
+
+        $app.saveNoValidate(logRecord)
+    } catch (error) {
+        console.error("Failed to write cron log: " + error.message)
+    }
+}
+
 function makeRequest(url, retries = MAX_RETRIES) {
     try {
         const response = $http.send({
@@ -380,8 +402,9 @@ function batchProcessPrices(priceData, batchNumber, totalBatches) {
 }
 
 // Main sync function to download and process bulk card data
-function syncBulkCardData() {
+function syncBulkCardData(jobName = "manual_sync") {
     console.log("Starting bulk card data synchronization...")
+    logCronEvent(jobName, "started", "Bulk card data synchronization started")
     updateSyncStatus("cards", "in_progress", 0)
 
     try {
@@ -421,6 +444,7 @@ function syncBulkCardData() {
         // Mark sync as complete
         updateSyncStatus("cards", "success", totalProcessed)
         console.log(`Bulk card data sync completed successfully: ${totalProcessed} cards processed`)
+        logCronEvent(jobName, "success", `Bulk card data sync completed successfully: ${totalProcessed} cards processed`, totalProcessed)
 
         // Trigger image sync for cards that need images
         try {
@@ -455,6 +479,7 @@ function syncBulkCardData() {
         const errorMessage = `Bulk sync failed: ${error.message}`
         console.error(errorMessage)
         updateSyncStatus("cards", "failed", 0, errorMessage)
+        logCronEvent(jobName, "failed", errorMessage, 0, { error: error.message })
 
         return {
             success: false,
@@ -533,6 +558,6 @@ function downloadCardImage(cardId, imageUrl, retries = 2) {
 }
 
 module.exports = {
-    syncBulkCardData: () => syncBulkCardData(),
+    syncBulkCardData: (jobName) => syncBulkCardData(jobName),
     downloadCardImage: (cardId, imageUrl, retries) => downloadCardImage(cardId, imageUrl, retries)
 }
