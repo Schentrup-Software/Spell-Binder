@@ -12,6 +12,7 @@ import VirtualScrollList from './VirtualScrollList'
 import MemoizedCollectionCard from './MemoizedCollectionCard'
 import BulkImportModal from './BulkImportModal'
 import BulkExportModal from './BulkExportModal'
+import AddToDeckFromCardModal from './AddToDeckFromCardModal'
 
 import FilterBar from './FilterBar'
 import { useErrorHandler } from '../hooks/useErrorHandler'
@@ -44,6 +45,7 @@ export default function CollectionView() {
   const [selectedEntry, setSelectedEntry] = useState<Card | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showAddToDeckModal, setShowAddToDeckModal] = useState(false)
   const [showBulkImportModal, setShowBulkImportModal] = useState(false)
   const [showBulkExportModal, setShowBulkExportModal] = useState(false)
 
@@ -183,6 +185,11 @@ export default function CollectionView() {
     setShowDeleteModal(true);
   };
 
+  const handleAddToDeckClick = (entry: Card) => {
+    setSelectedEntry(entry);
+    setShowAddToDeckModal(true);
+  };
+
   // Handle saving edited entry
   const handleSaveEdit = async () => {
     if (!selectedEntry) return;
@@ -258,6 +265,10 @@ export default function CollectionView() {
 
   const memoizedHandleDeleteClick = useCallback((entry: Card) => {
     handleDeleteClick(entry);
+  }, []);
+
+  const memoizedHandleAddToDeckClick = useCallback((entry: Card) => {
+    handleAddToDeckClick(entry);
   }, []);
 
   // Determine if we should use virtual scrolling (for collections > 50 items)
@@ -472,6 +483,7 @@ export default function CollectionView() {
                       entry={entry}
                       onEdit={memoizedHandleEditClick}
                       onDelete={memoizedHandleDeleteClick}
+                      onAddToDeck={memoizedHandleAddToDeckClick}
                     />
                   )}
                   className="border border-gray-200 rounded-lg"
@@ -484,6 +496,7 @@ export default function CollectionView() {
                       entry={entry}
                       onEdit={memoizedHandleEditClick}
                       onDelete={memoizedHandleDeleteClick}
+                      onAddToDeck={memoizedHandleAddToDeckClick}
                     />
                   ))}
                 </div>
@@ -658,6 +671,13 @@ export default function CollectionView() {
         <BulkExportModal
           isOpen={showBulkExportModal}
           onClose={() => setShowBulkExportModal(false)}
+        />
+
+        <AddToDeckFromCardModal
+          isOpen={showAddToDeckModal}
+          onClose={() => setShowAddToDeckModal(false)}
+          card={selectedEntry}
+          onAdded={(deckName) => handleSuccess(`Added ${selectedEntry?.name || 'card'} to ${deckName}`)}
         />
       </div>
     </ErrorBoundary>

@@ -9,9 +9,10 @@ interface CardDetailProps {
   card: Card;
   onAddToCollection: (quantity: number, condition: CardCondition, foil: boolean, notes: string) => Promise<void>;
   onClose: () => void;
+  onOpenAddToDeck?: () => void;
 }
 
-export default function CardDetail({ card, onAddToCollection, onClose }: CardDetailProps) {
+export default function CardDetail({ card, onAddToCollection, onClose, onOpenAddToDeck }: CardDetailProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form validation setup
@@ -218,6 +219,16 @@ export default function CardDetail({ card, onAddToCollection, onClose }: CardDet
           
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row justify-end gap-3">
+            {onOpenAddToDeck && (
+              <button
+                type="button"
+                onClick={onOpenAddToDeck}
+                disabled={isSubmitting}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 active:bg-green-800 transition-colors touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add to Deck
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}

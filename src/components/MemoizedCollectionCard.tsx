@@ -6,12 +6,14 @@ interface CollectionCardProps {
   entry: Card;
   onEdit: (entry: Card) => void;
   onDelete: (entry: Card) => void;
+  onAddToDeck: (entry: Card) => void;
 }
 
 const MemoizedCollectionCard = memo(function CollectionCard({
   entry,
   onEdit,
-  onDelete
+  onDelete,
+  onAddToDeck
 }: CollectionCardProps) {
   if (!entry?.collection) return null;
 
@@ -108,6 +110,15 @@ const MemoizedCollectionCard = memo(function CollectionCard({
               Edit
             </button>
             <button
+              onClick={() => onAddToDeck(entry)}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 active:bg-green-800 transition-colors touch-manipulation"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add to Deck
+            </button>
+            <button
               onClick={() => onDelete(entry)}
               className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 active:bg-red-800 transition-colors touch-manipulation"
             >
@@ -131,7 +142,8 @@ const MemoizedCollectionCard = memo(function CollectionCard({
     prevProps.entry?.collection?.notes === nextProps.entry?.collection?.notes &&
     prevProps.entry.price_usd === nextProps.entry.price_usd &&
     prevProps.onEdit === nextProps.onEdit &&
-    prevProps.onDelete === nextProps.onDelete
+    prevProps.onDelete === nextProps.onDelete &&
+    prevProps.onAddToDeck === nextProps.onAddToDeck
   );
 });
 
