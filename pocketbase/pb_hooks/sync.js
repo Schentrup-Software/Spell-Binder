@@ -98,6 +98,105 @@ function updateSyncStatus(dataType, status, recordsProcessed = 0, errorMessage =
     }
 }
 
+function stableStringify(value) {
+    if (value === null || value === undefined) {
+        return "null"
+    }
+
+    if (typeof value !== "object") {
+        return JSON.stringify(value)
+    }
+
+    if (Array.isArray(value)) {
+        return "[" + value.map(item => stableStringify(item)).join(",") + "]"
+    }
+
+    const keys = Object.keys(value).sort()
+    return "{" + keys.map(key => JSON.stringify(key) + ":" + stableStringify(value[key])).join(",") + "}"
+}
+
+function hashString(input) {
+    let hash = 2166136261
+
+    for (let i = 0; i < input.length; i++) {
+        hash ^= input.charCodeAt(i)
+        hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24)
+        hash >>>= 0
+    }
+
+    return hash.toString(16).padStart(8, "0")
+}
+
+function buildCardSyncPayload(cardData) {
+    const imageUris = cardData.image_uris
+        || (cardData.card_faces && cardData.card_faces[0] && cardData.card_faces[0].image_uris)
+        || null
+
+    return {
+        name: cardData.name,
+        oracle_id: cardData.oracle_id || "",
+        lang: cardData.lang || "en",
+        released_at: cardData.released_at || null,
+        layout: cardData.layout || "normal",
+        highres_image: cardData.highres_image || false,
+        image_status: cardData.image_status || "missing",
+        cmc: cardData.cmc || 0,
+        type_line: cardData.type_line || "",
+        color_identity: cardData.color_identity || [],
+        colors: cardData.colors || [],
+        keywords: cardData.keywords || [],
+        mana_cost: cardData.mana_cost || "",
+        oracle_text: cardData.oracle_text || "",
+        power: cardData.power || "",
+        toughness: cardData.toughness || "",
+        loyalty: cardData.loyalty || "",
+        defense: cardData.defense || "",
+        card_faces: cardData.card_faces || [],
+        legalities: cardData.legalities || {},
+        games: cardData.games || [],
+        reserved: cardData.reserved || false,
+        foil: cardData.foil || false,
+        nonfoil: cardData.nonfoil || false,
+        finishes: cardData.finishes || [],
+        oversized: cardData.oversized || false,
+        promo: cardData.promo || false,
+        reprint: cardData.reprint || false,
+        variation: cardData.variation || false,
+        set_id: cardData.set_id || "",
+        set_code: cardData.set,
+        set_name: cardData.set_name || "",
+        set_type: cardData.set_type || "",
+        collector_number: cardData.collector_number || "",
+        digital: cardData.digital || false,
+        rarity: cardData.rarity || "common",
+        artist: cardData.artist || "",
+        artist_ids: cardData.artist_ids || [],
+        border_color: cardData.border_color || "black",
+        frame: cardData.frame || "",
+        security_stamp: cardData.security_stamp || "",
+        full_art: cardData.full_art || false,
+        textless: cardData.textless || false,
+        booster: cardData.booster || false,
+        story_spotlight: cardData.story_spotlight || false,
+        edhrec_rank: cardData.edhrec_rank || null,
+        penny_rank: cardData.penny_rank || null,
+        related_uris: cardData.related_uris || {},
+        purchase_uris: cardData.purchase_uris || {},
+        image_uris: imageUris,
+        multiverse_ids: cardData.multiverse_ids || [],
+        mtgo_id: cardData.mtgo_id || null,
+        arena_id: cardData.arena_id || null,
+        tcgplayer_id: cardData.tcgplayer_id || null,
+        cardmarket_id: cardData.cardmarket_id || null,
+        preview_info: cardData.preview || null,
+        all_parts: cardData.all_parts || null
+    }
+}
+
+function generateCardSyncHash(cardData) {
+    return hashString(stableStringify(buildCardSyncPayload(cardData)))
+}
+
 // Process a batch of cards and insert/update them in the database
 function processBatch(cards, batchNumber, totalBatches) {
     const cardsCollection = $app.findCollectionByNameOrId("cards")
@@ -123,6 +222,8 @@ function processBatch(cards, batchNumber, totalBatches) {
                 continue
             }
 
+            const syncHash = generateCardSyncHash(cardData)
+
             // Check if card already exists
             let cardRecord = existingCardIds.get(cardData.id) || null
             if (!cardRecord) {
@@ -133,7 +234,10 @@ function processBatch(cards, batchNumber, totalBatches) {
                     card_id: cardRecord.id,
                     prices: cardData.prices || {},
                 });
-                continue;
+
+                if (cardRecord.get("scryfall_data_hash") === syncHash) {
+                    continue;
+                }
             }
 
             // Basic card information
@@ -254,6 +358,7 @@ function processBatch(cards, batchNumber, totalBatches) {
 
             // Update timestamp
             cardRecord.set("last_updated", new DateTime())
+            cardRecord.set("scryfall_data_hash", syncHash)
             $app.saveNoValidate(cardRecord)
 
             // Add card set to all_card_sets collection if it has set information
