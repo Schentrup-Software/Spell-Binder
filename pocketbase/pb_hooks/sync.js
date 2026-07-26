@@ -31,7 +31,8 @@ function makeRequest(url, retries = MAX_RETRIES) {
             url: url,
             method: "GET",
             headers: {
-                "User-Agent": "Spell-Binder/1.0"
+                "User-Agent": "Spell-Binder/1.0",
+                "Accept": "application/json"
             },
             timeout: 30
         })
